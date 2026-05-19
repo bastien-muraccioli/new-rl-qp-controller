@@ -40,7 +40,6 @@ void utils::run_rl_state(mc_control::fsm::Controller & ctl_)
   try
   {
     syncTime_ += ctl.timeStep;
-    syncPhase_ += ctl.timeStep;
     if(syncTime_ >= ctl.policyStepSize)
     {
       ctl.currentObservation = getCurrentObservation(ctl);
