@@ -33,6 +33,11 @@ ObserverPipelines:
     - type: Encoder
       config:
           velocity: encoderVelocities
+    # For humanoid robots, add an estimator to compute the floating base state (position, velocity and orientation of the robot in the world)
+    # BodySensor observer can be used in simulation, but on the real-robot, tilt observer must be used instead.
+    # - type: BodySensor
+    #   update: true
+    #   bodySensor: FloatingBase
 
 # Implement some additional text states
 states: {}
@@ -47,12 +52,16 @@ policy_path: ["policyName1.onnx", "policyName2.onnx"]  # Path to the RL policy f
 default_policy_index: 0 # Index of the default policy to use
 policies:
   # index 0 : policyName1
-  - is_torque_control: true
-    use_QP: true
-    action_scale: 1.0
+  - use_QP: true
     policy_step_size: 0.01 # Policy step size in seconds
     physics_step_size: 0.001 # Physics step size in seconds
     pd_gains_ratio: 1.0
+
+    action_scale:
+        joint_name1: gain value e.g 100.0
+        joint_name2: gain value e.g 100.0
+        ...
+        joint_nameN: gain value e.g 100.0
     kp:
         joint_name1: gain value e.g 100.0
         joint_name2: gain value e.g 100.0
@@ -63,18 +72,33 @@ policies:
         joint_name2: gain value e.g 100.0
         ...
         joint_nameN: gain value e.g 100.0
+
+    # q0 must respect the joint order used in the RL framework (for action_scale, kp and kd, the joint order does not matter)
     q0:
       joint_name1: joint pos value in rad e.g 0.0
       joint_name2: joint pos value in rad e.g 0.0
       ...
       joint_nameN: joint pos value in rad e.g 0.0
+    
+    # The order of joints in action vector (policy output)
+    # Some RL policies may not control all the joints of the robot, in that case, only the controlled joints should be listed here.
+    ref_joint_order:
+      - joint_name1
+      - joint_name2
+      ...
+      - joint_nameN
+
   # index 1 : policyName2
-  - is_torque_control: true
-    use_QP: true
-    action_scale: 1.0
+  - use_QP: true
     policy_step_size: 0.01 # Policy step size in seconds
     physics_step_size: 0.001 # Physics step size in seconds
     pd_gains_ratio: 1.0
+
+    action_scale:
+        joint_name1: gain value e.g 100.0
+        joint_name2: gain value e.g 100.0
+        ...
+        joint_nameN: gain value e.g 100.0
     kp:
         joint_name1: gain value e.g 100.0
         joint_name2: gain value e.g 100.0
@@ -85,8 +109,18 @@ policies:
         joint_name2: gain value e.g 100.0
         ...
         joint_nameN: gain value e.g 100.0
+
+    # q0 must respect the joint order used in the RL framework (for action_scale, kp and kd, the joint order does not matter)
     q0:
-        joint_name1: joint pos value in rad e.g 0.0
-        joint_name2: joint pos value in rad e.g 0.0
-        ...
-        joint_nameN: joint pos value in rad e.g 0.0
+      joint_name1: joint pos value in rad e.g 0.0
+      joint_name2: joint pos value in rad e.g 0.0
+      ...
+      joint_nameN: joint pos value in rad e.g 0.0
+    
+    # The order of joints in action vector (policy output)
+    # Some RL policies may not control all the joints of the robot, in that case, only the controlled joints should be listed here.
+    ref_joint_order:
+      - joint_name1
+      - joint_name2
+      ...
+      - joint_nameN
