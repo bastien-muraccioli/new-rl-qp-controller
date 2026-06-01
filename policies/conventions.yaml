@@ -1,0 +1,136 @@
+conventions:
+  mjlab:
+    joint_order: []
+
+    joint_groups:
+      all: []
+      legs: []
+
+    type_aliases:
+      base_lin_vel: base_lin_vel
+      base_ang_vel: base_ang_vel
+      projected_gravity: projected_gravity
+      joint_pos_rel: joint_pos
+      joint_vel_rel: joint_vel
+      last_action: last_action
+      generated_commands: command
+
+    observation_defaults:
+      base_lin_vel:
+        scale: 1.0
+
+      base_ang_vel:
+        scale: 1.0
+
+      projected_gravity:
+        scale: 1.0
+
+      joint_pos_rel:
+        joints: all
+        relative_to_default_pose: true
+        biased: false
+        scale: 1.0
+
+      joint_vel_rel:
+        joints: all
+        relative_to_default_velocity: true
+        scale: 1.0
+
+      last_action:
+        scale: 1.0
+
+      generated_commands:
+        size: 3
+        scale: 1.0
+
+  isaaclab:
+    joint_order: []
+
+    joint_groups:
+      all: []
+      legs: []
+
+    type_aliases:
+      base_lin_vel: base_lin_vel
+      base_ang_vel: base_ang_vel
+      projected_gravity: projected_gravity
+      joint_pos: joint_pos
+      joint_vel: joint_vel
+      last_action: last_action
+      command: command
+
+    observation_defaults:
+      base_lin_vel:
+        body: base_link
+        scale: 1.0
+
+      base_ang_vel:
+        body: base_link
+        scale: 1.0
+
+      projected_gravity:
+        body: base_link
+        scale: 1.0
+
+      joint_pos:
+        joints: all
+        relative_to_default_pose: true
+        scale: 1.0
+
+      joint_vel:
+        joints: all
+        relative_to_default_velocity: false
+        scale: 1.0
+
+      last_action:
+        scale: 1.0
+
+      command:
+        size: 3
+        scale: 1.0
+
+  mc_rtc:
+    base_body: base_link
+
+    joint_order: []
+
+    joint_groups:
+      all: []
+      legs: []
+
+    type_aliases:
+      joint_pos: joint_pos
+      joint_vel: joint_vel
+      projected_gravity: projected_gravity
+      base_ang_vel: base_ang_vel
+      base_lin_vel: base_lin_vel
+      last_action: last_action
+      command: command
+
+    observation_defaults:
+      joint_pos:
+        relative_to_default_pose: true
+        scale: 1.0
+
+      joint_vel:
+        relative_to_default_velocity: false
+        scale: 1.0
+
+      projected_gravity:
+        body: base_link
+        scale: 1.0
+
+      base_ang_vel:
+        body: base_link
+        scale: 1.0
+
+      base_lin_vel:
+        body: base_link
+        scale: 1.0
+
+      last_action:
+        scale: 1.0
+
+      command:
+        size: 3
+        scale: 1.0

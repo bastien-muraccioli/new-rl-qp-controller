@@ -1,0 +1,17 @@
+history: 5
+
+training_convention: mjlab
+
+observations:
+
+  - type: joint_pos
+
+  - type: joint_vel
+
+  - type: projected_gravity
+
+  - type: base_ang_vel
+
+  - type: last_action
+
+  - type: command

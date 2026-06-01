@@ -1,0 +1,36 @@
+name: policyName1
+
+onnx: policyName1.onnx
+
+control:
+  use_QP: true
+  policy_step_size: 0.01
+  physics_step_size: 0.001
+  kp_scale: 1.0
+  kd_scale: 1.0
+
+action:
+  joints:
+    - hip_yaw
+    - hip_roll
+    - hip_pitch
+
+  scale:
+    hip_yaw: 0.25
+    hip_roll: 0.25
+    hip_pitch: 0.25
+
+  default_position:
+    hip_yaw: 0.0
+    hip_roll: 0.0
+    hip_pitch: 0.0
+
+kp:
+  hip_yaw: 100.0
+  hip_roll: 100.0
+  hip_pitch: 100.0
+
+kd:
+  hip_yaw: 10.0
+  hip_roll: 10.0
+  hip_pitch: 10.0

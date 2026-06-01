@@ -1,5 +1,7 @@
 #pragma once
+#include <Eigen/Core>
 #include <mc_control/fsm/State.h>
+#include <string>
 
 /**
  * @brief FSM state lifecycle helpers and observation builder for RL controllers.
@@ -38,7 +40,7 @@
  * - **Velocities**: express in body frame using bodyVelB.
  * - **Last action**: use the raw policy output (before action_scale multiply).
  */
-struct utils
+struct RLStateRunner
 {  
   /**
    * @brief Called when an RL FSM state starts.
@@ -47,7 +49,7 @@ struct utils
    * adds policy info to the GUI, and calls initializeRLObservation() to populate
    * history buffers with the current robot state.
    */
-  void start_rl_state(mc_control::fsm::Controller & ctl_, std::string state_name);
+  void start(mc_control::fsm::Controller & ctl_, std::string state_name);
 
   /**
    * @brief Called every controller timestep while an RL FSM state is active.
@@ -62,42 +64,15 @@ struct utils
    * at every controller timestep using fresh joint state (equivalent to a real
    * onboard PD loop running faster than the policy).
     */
-  void run_rl_state(mc_control::fsm::Controller & ctl_);
+  void run(mc_control::fsm::Controller & ctl_);
 
   /**
    * @brief Called when an RL FSM state ends.
    *
    * Removes the policy GUI panel added by start_rl_state().
     */
-  void teardown_rl_state(mc_control::fsm::Controller & ctl_);
-
-  /**
-   * @brief Build and return the full observation vector for the current policy.
-   *
-   * **Must be adapted by the user** to match the observation space of the
-   * loaded policy. The switch-case on currentPolicyIndex allows different
-   * policies to have different observation structures.
-   *
-   * Typical structure (history_length=5, oldest first):
-   * @code
-   *   // Shift history buffers
-   *   for (int i = HISTORY_SIZE - 1; i > 0; --i) { ctl.linVel[i] = ctl.linVel[i-1]; ... }
-   *   ctl.initializeRLObservation(); // fill index 0 with current state
-   *
-   *   // Append to observation (oldest first = index HISTORY_SIZE-1 to 0)
-   *   for (int i = HISTORY_SIZE-1; i >= 0; --i) appendToObs(ctl.linVel[i]);
-   *   for (int i = HISTORY_SIZE-1; i >= 0; --i) appendToObs(ctl.angVel[i]);
-   *   // ... etc.
-   * @endcode
-   *
-   * An assertion checks that exactly obs.size() values were written.
-   *
-   * @param ctl_  The FSM controller.
-   * @return      Observation vector of size rlPolicy->getObservationSize().
-   */
-  Eigen::VectorXd getCurrentObservation(mc_control::fsm::Controller & ctl_);
+  void teardown(mc_control::fsm::Controller & ctl_);
 
   private:
-   std::string state_name_;
-   double syncTime_; ///< Accumulated time since last policy inference (seconds)
+   std::string stateName_;
 };
