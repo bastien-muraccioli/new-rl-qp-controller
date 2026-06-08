@@ -111,7 +111,7 @@ Eigen::VectorXd ObservationManager::compute(const ObservationContext & context)
 
     entry.historyBuffer.push_front(current);
 
-    while(static_cast<int>(entry.history.size()) > entry.observation->history())
+    while(static_cast<int>(entry.historyBuffer.size()) > entry.observation->history())
     {
       entry.historyBuffer.pop_back();
     }
@@ -142,8 +142,11 @@ ObservationConfig ObservationManager::parseObservationConfig(const mc_rtc::Confi
   }
 
   out.type = out.requestedType;
-  out.name = config("name", out.requestedType);
-  out.history = config("history", defaultHistory);
+  out.name = out.requestedType;
+  config("name", out.name);
+
+  out.history = defaultHistory;
+  config("history", out.history);
 
   if(out.history <= 0)
   {

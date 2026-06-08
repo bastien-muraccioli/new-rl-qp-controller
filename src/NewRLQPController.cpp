@@ -99,7 +99,7 @@ bool NewRLQPController::byPassQPControl()
   {
     const double q = q_mbc[robot().jointIndexByName(joint_name)][0];
     const double q_dot = q_dot_mbc[robot().jointIndexByName(joint_name)][0];
-    tau_rl(i) = kp_(i) * (q_rl(i) - q) - kd_(i) * q_dot;
+    tau_rl(i) = rlRuntime_.kp()(i) * (rlRuntime_.q_rl()(i) - q) - rlRuntime_.kd()(i) * q_dot;
     robot().mbc().jointTorque[robot().jointIndexByName(joint_name)][0] = tau_rl(i);
     i++;
   }

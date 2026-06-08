@@ -1,6 +1,6 @@
 #include "observation/Observation.h"
 #include "observation/Observations.h"
-#include "common/ConfigurationHelpers.h"
+#include "ConfigurationHelpers.h"
 
 #include <algorithm>
 #include <sstream>
@@ -106,7 +106,9 @@ ObservationConvention ObservationConvention::fromConfig(const mc_rtc::Configurat
 
     for(size_t i = 0; i < keys.size(); ++i)
     {
-      out.typeAliases[keys[i]] = aliases(keys[i], keys[i]);
+      std::string alias = keys[i];
+      aliases(keys[i], alias);
+      out.typeAliases[keys[i]] = alias;
     }
   }
 
@@ -268,7 +270,8 @@ Eigen::VectorXd Observation::readScaleVector(const mc_rtc::Configuration & param
   {
   }
 
-  const double scalar = parameters(key, fallback);
+  double scalar = fallback;
+  parameters(key, scalar);
   return Eigen::VectorXd::Constant(size, scalar);
 }
 

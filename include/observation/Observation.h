@@ -185,10 +185,13 @@ protected:
                   const T & fallback) const
   {
     if(!parameters.has(key))
-    {
-      return fallback;
-    }
-    return parameters(key, fallback);
+  {
+    return fallback;
+  }
+
+    T value = fallback;
+    parameters(key, value);
+    return value;
   }
 
   /** @brief Convert joint names to indices in ObservationContext::controllerJointOrder. */

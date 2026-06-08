@@ -1,4 +1,4 @@
-#include "common/ConfigurationHelpers.h"
+#include "ConfigurationHelpers.h"
 
 #include <algorithm>
 #include <dirent.h>

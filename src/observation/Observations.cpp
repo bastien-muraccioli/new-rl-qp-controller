@@ -13,7 +13,6 @@ namespace rlqp
 // JointPosObservation
 //============================================================================//
 
-...
 JointPosObservation::JointPosObservation(const ObservationConfig & config,
                                          const ObservationConvention & convention)
 : Observation(config, convention)
@@ -118,7 +117,7 @@ void ProjectedGravityObservation::configure(const ObservationContext & context)
 
   const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
 
-  if(!context.observationRobot.mb().hasBody(body))
+  if(!context.observationRobot.hasBody(body))
   {
     mc_rtc::log::error_and_throw(
       "[Observation:{}] Body '{}' does not exist on robot '{}'",
@@ -139,7 +138,7 @@ void ProjectedGravityObservation::compute(const ObservationContext & context, Ei
   const Eigen::Vector3d gravityWorld(0.0, 0.0, -1.0);
   const Eigen::Vector3d gravityBody = X_0_body.rotation() * gravityWorld;
 
-  out = [gravityBody[0]*scale_[0], gravityBody[1]*scale_[1], gravityBody[2]*scale[2]];
+  out = gravityBody.cwiseProduct(scale_);
 }
 
 //============================================================================//
@@ -159,7 +158,7 @@ void BaseAngVelObservation::configure(const ObservationContext & context)
 
   const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
 
-  if(!context.observationRobot.mb().hasBody(body))
+  if(!context.observationRobot.hasBody(body))
   {
     mc_rtc::log::error_and_throw(
       "[Observation:{}] Body '{}' does not exist on robot '{}'",
@@ -175,8 +174,7 @@ void BaseAngVelObservation::configure(const ObservationContext & context)
 void BaseAngVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
 {
   const Eigen::Vector3d value = context.observationRobot.mbc().bodyVelB[static_cast<size_t>(bodyIndex_)].angular();
-  writeScaledVector3(value, scale_, out);
-  out = [value[0]*scale_[0], value[1]*scale_[1], value[2]*scale_[2]];
+  out = value.cwiseProduct(scale_);
 }
 
 //============================================================================//
@@ -196,7 +194,7 @@ void BaseLinVelObservation::configure(const ObservationContext & context)
 
   const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
 
-  if(!context.observationRobot.mb().hasBody(body))
+  if(!context.observationRobot.hasBody(body))
   {
     mc_rtc::log::error_and_throw(
       "[Observation:{}] Body '{}' does not exist on robot '{}'",
@@ -212,7 +210,7 @@ void BaseLinVelObservation::configure(const ObservationContext & context)
 void BaseLinVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
 {
   const Eigen::Vector3d value = context.observationRobot.mbc().bodyVelB[static_cast<size_t>(bodyIndex_)].linear();
-  writeScaledVector3(value, scale_, out);
+  out = value.cwiseProduct(scale_);
 }
 
 //============================================================================//

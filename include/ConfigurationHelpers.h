@@ -65,7 +65,9 @@ T readRequired(const mc_rtc::Configuration & cfg,
   {
     mc_rtc::log::error_and_throw("[{}] Missing required field '{}'", owner, key);
   }
-  return cfg(key, T());
+  T value = T();
+  cfg(key, value);
+  return value;
 }
 
 /**
@@ -80,7 +82,9 @@ T readOr(const mc_rtc::Configuration & cfg,
   {
     return fallback;
   }
-  return cfg(key, fallback);
+  T value = fallback;
+  cfg(key, value);
+  return value;
 }
 
 } // namespace config

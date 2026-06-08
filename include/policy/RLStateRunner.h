@@ -49,7 +49,7 @@ struct RLStateRunner
    * adds policy info to the GUI, and calls initializeRLObservation() to populate
    * history buffers with the current robot state.
    */
-  void start(mc_control::fsm::Controller & ctl_, std::string state_name);
+  void start(mc_control::fsm::Controller & ctl_, const std::string & state_name);
 
   /**
    * @brief Called every controller timestep while an RL FSM state is active.

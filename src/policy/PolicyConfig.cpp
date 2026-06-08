@@ -1,5 +1,5 @@
 #include "policy/PolicyConfig.h"
-#include "common/ConfigurationHelpers.h"
+#include "ConfigurationHelpers.h"
 
 #include <mc_rtc/logging.h>
 
@@ -184,7 +184,8 @@ void PolicyManager::load(const mc_rtc::Configuration & controllerConfig)
     policies_[policy.name] = policy;
   }
 
-  const std::string defaultPolicy = controllerConfig("default_policy", orderedNames_.front());
+  std::string defaultPolicy = orderedNames_.front();
+  controllerConfig("default_policy", defaultPolicy);
   select(defaultPolicy);
 
   mc_rtc::log::success("[PolicyManager] Loaded {} policies from '{}'. Active policy: {}",
