@@ -8,6 +8,7 @@
 #include <Eigen/Core>
 
 #include <mc_rtc/Configuration.h>
+#include <mc_rbdyn/Robot.h>
 #include <mc_tasks/TorqueJointTask.h>
 
 #include <memory>
@@ -91,6 +92,7 @@ private:
 
   void validateObservationAgainstNetwork() const;
   ObservationContext makeObservationContext(NewRLQPController & ctl);
+  mc_rbdyn::Robot & selectedObservationRobot(NewRLQPController & ctl);
 
   int jointIndexInOrder(const std::vector<std::string> & order, const std::string & joint) const;
 
@@ -111,6 +113,7 @@ private:
 
   std::string robotName_;
   std::string baseBody_ = "base_link";
+  std::string observationSource_ = "realRobot";
 
   std::vector<std::string> controllerJointOrder_;
   std::vector<std::string> policyJointOrder_;

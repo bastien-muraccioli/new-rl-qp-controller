@@ -16,7 +16,9 @@ VerboseStateFactory: false
 robots:
   ground:
     module: env/ground
+
   base_body: base_link
+  observation_source: realRobot
 
 collisions:
   - type: collision
@@ -37,5 +39,6 @@ transitions:
 init: NewRLQPController_Initial
 
 policies_root: policies
+
 
 default_policy: policyName1

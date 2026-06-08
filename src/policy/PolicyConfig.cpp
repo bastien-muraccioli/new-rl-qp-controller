@@ -4,6 +4,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <dirent.h>
+#include <fstream>
+#include <sys/stat.h>
 
 namespace rlqp
 {
@@ -43,6 +46,60 @@ std::string basenameWithoutExtension(const std::string & path)
   }
 
   return base;
+}
+
+bool fileExists(const std::string & path)
+{
+  std::ifstream file(path.c_str());
+  return file.good();
+}
+
+bool isDirectory(const std::string & path)
+{
+  struct stat status;
+  if(stat(path.c_str(), &status) != 0)
+  {
+    return false;
+  }
+  return S_ISDIR(status.st_mode);
+}
+
+std::vector<std::string> discoverPolicyFolders(const std::string & policiesRoot)
+{
+  std::vector<std::string> folders;
+
+  DIR * dir = opendir(policiesRoot.c_str());
+  if(!dir)
+  {
+    mc_rtc::log::error_and_throw(
+      "[PolicyManager] Could not open policies_root '{}'",
+      policiesRoot);
+  }
+
+  struct dirent * entry = nullptr;
+  while((entry = readdir(dir)) != nullptr)
+  {
+    const std::string name = entry->d_name;
+    if(name == "." || name == "..")
+    {
+      continue;
+    }
+
+    const std::string folder = joinPath(policiesRoot, name);
+    if(!isDirectory(folder))
+    {
+      continue;
+    }
+
+    if(fileExists(joinPath(folder, "policy.yaml")) && fileExists(joinPath(folder, "observations.yaml")))
+    {
+      folders.push_back(folder);
+    }
+  }
+
+  closedir(dir);
+  std::sort(folders.begin(), folders.end());
+  return folders;
 }
 
 std::map<std::string, double> readRequiredMap(const mc_rtc::Configuration & config,
@@ -98,31 +155,6 @@ void validateMapContains(const std::map<std::string, double> & values,
         joint);
     }
   }
-}
-
-std::vector<std::string> readPolicyFolders(const mc_rtc::Configuration & controllerConfig)
-{
-  if(controllerConfig.has("policy_folders"))
-  {
-    return controllerConfig("policy_folders", std::vector<std::string>());
-  }
-
-  if(controllerConfig.has("policies_root") && controllerConfig.has("policy_names"))
-  {
-    const std::string root = controllerConfig("policies_root", std::string("policy"));
-    const std::vector<std::string> names =
-      controllerConfig("policy_names", std::vector<std::string>());
-
-    std::vector<std::string> folders;
-    for(size_t i = 0; i < names.size(); ++i)
-    {
-      folders.push_back(joinPath(root, names[i]));
-    }
-
-    return folders;
-  }
-
-  return std::vector<std::string>();
 }
 
 } // namespace
@@ -188,7 +220,6 @@ PolicyConfig PolicyConfig::load(const std::string & policyFolder)
   }
 
   out.validate();
-
   return out;
 }
 
@@ -254,12 +285,14 @@ void PolicyManager::load(const mc_rtc::Configuration & controllerConfig)
   policies_.clear();
   currentName_.clear();
 
-  const std::vector<std::string> folders = readPolicyFolders(controllerConfig);
+  const std::string policiesRoot = controllerConfig("policies_root", std::string("policies"));
+  const std::vector<std::string> folders = discoverPolicyFolders(policiesRoot);
 
   if(folders.empty())
   {
     mc_rtc::log::error_and_throw(
-      "[PolicyManager] No policies configured. Expected either 'policy_folders' or 'policies_root' + 'policy_names'.");
+      "[PolicyManager] No policy folders found in '{}'. Expected subdirectories containing policy.yaml and observations.yaml.",
+      policiesRoot);
   }
 
   for(size_t i = 0; i < folders.size(); ++i)
@@ -275,35 +308,22 @@ void PolicyManager::load(const mc_rtc::Configuration & controllerConfig)
     policies_[policy.name] = policy;
   }
 
-  const std::string defaultPolicy =
-    controllerConfig("default_policy", orderedNames_.front());
-
+  const std::string defaultPolicy = controllerConfig("default_policy", orderedNames_.front());
   select(defaultPolicy);
 
-  mc_rtc::log::success("[PolicyManager] Loaded {} policies. Active policy: {}",
+  mc_rtc::log::success("[PolicyManager] Loaded {} policies from '{}'. Active policy: {}",
                        policies_.size(),
+                       policiesRoot,
                        currentName_);
 }
 
-bool PolicyManager::empty() const
-{
-  return policies_.empty();
-}
+bool PolicyManager::empty() const { return policies_.empty(); }
 
-size_t PolicyManager::size() const
-{
-  return policies_.size();
-}
+size_t PolicyManager::size() const { return policies_.size(); }
 
-const PolicyConfig & PolicyManager::current() const
-{
-  return get(currentName_);
-}
+const PolicyConfig & PolicyManager::current() const { return get(currentName_); }
 
-const std::string & PolicyManager::currentName() const
-{
-  return currentName_;
-}
+const std::string & PolicyManager::currentName() const { return currentName_; }
 
 const PolicyConfig & PolicyManager::get(const std::string & name) const
 {
@@ -349,9 +369,6 @@ void PolicyManager::selectNext()
   currentName_ = *it;
 }
 
-std::vector<std::string> PolicyManager::names() const
-{
-  return orderedNames_;
-}
+std::vector<std::string> PolicyManager::names() const { return orderedNames_; }
 
 } // namespace rlqp

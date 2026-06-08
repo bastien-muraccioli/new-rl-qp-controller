@@ -26,6 +26,14 @@ void RLPolicyRuntime::configure(const mc_rtc::Configuration & controllerConfig,
   if(controllerConfig_.has("robot"))
   {
     baseBody_ = controllerConfig_("robot")("base_body", std::string("base_link"));
+    observationSource_ = controllerConfig_("robot")("observation_source", std::string("realRobot"));
+  }
+
+  if(observationSource_ != "realRobot" && observationSource_ != "robot")
+  {
+    mc_rtc::log::error_and_throw(
+      "[RLPolicyRuntime] Invalid robot.observation_source '{}'. Expected 'realRobot' or 'robot'.",
+      observationSource_);
   }
 
   const int nbActuatedJoints = static_cast<int>(controllerJointOrder_.size());
@@ -363,9 +371,7 @@ void RLPolicyRuntime::validateObservationAgainstNetwork() const
 ObservationContext RLPolicyRuntime::makeObservationContext(NewRLQPController & ctl)
 {
   return ObservationContext{
-    ctl,
-    ctl.robot(),
-    ctl.realRobot(robotName_),
+    selectedObservationRobot(ctl),
     baseBody_,
     controllerJointOrder_,
     policyJointOrder_,
@@ -373,6 +379,16 @@ ObservationContext RLPolicyRuntime::makeObservationContext(NewRLQPController & c
     currentAction_,
     command_,
     activeConvention_};
+}
+
+mc_rbdyn::Robot & RLPolicyRuntime::selectedObservationRobot(NewRLQPController & ctl)
+{
+  if(observationSource_ == "robot")
+  {
+    return ctl.robot();
+  }
+
+  return ctl.realRobot(robotName_);
 }
 
 int RLPolicyRuntime::jointIndexInOrder(const std::vector<std::string> & order,

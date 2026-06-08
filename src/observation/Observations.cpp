@@ -1,260 +1,272 @@
 #include "observation/Observations.h"
 
-#include "NewRLQPController.h"
 
 #include <RBDyn/MultiBodyConfig.h>
 #include <SpaceVecAlg/SpaceVecAlg>
-
-#include <algorithm>
-#include <sstream>
-#include <stdexcept>
 
 #include <mc_rtc/logging.h>
 
 namespace rlqp
 {
-    JointPosObservation::JointPosObservation(const ObservationConfig & config,
-                                            const ObservationConvention & convention)
-    : Observation(config, convention)
+
+namespace
+{
+
+void writeScaledVector3(const Eigen::Vector3d & value,
+                        const Eigen::VectorXd & scale,
+                        Eigen::Ref<Eigen::VectorXd> out)
+{
+  out(0) = scale(0) * value(0);
+  out(1) = scale(1) * value(1);
+  out(2) = scale(2) * value(2);
+}
+
+} // namespace
+
+JointPosObservation::JointPosObservation(const ObservationConfig & config,
+                                         const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
+
+void JointPosObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
+
+  const std::vector<std::string> joints =
+    context.convention.resolveJoints(parameters, context.policyJointOrder);
+
+  indices_ = resolveControllerJointIndices(context, joints);
+  relativeToDefaultPose_ = readParameter<bool>(parameters, "relative_to_default_pose", true);
+  scale_ = readScaleVector(parameters, "scale", static_cast<int>(indices_.size()), 1.0);
+
+  defaultPose_ = Eigen::VectorXd::Zero(static_cast<int>(indices_.size()));
+
+  for(size_t i = 0; i < indices_.size(); ++i)
+  {
+    defaultPose_(static_cast<int>(i)) = context.qZeroControllerOrder(indices_[i]);
+  }
+}
+
+void JointPosObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  for(size_t i = 0; i < indices_.size(); ++i)
+  {
+    const std::string & joint = context.controllerJointOrder[static_cast<size_t>(indices_[i])];
+    const int mbcIndex = context.observationRobot.jointIndexByName(joint);
+
+    double value = context.observationRobot.mbc().q[static_cast<size_t>(mbcIndex)][0];
+
+    if(relativeToDefaultPose_)
     {
+      value -= defaultPose_(static_cast<int>(i));
     }
 
-    void JointPosObservation::configure(const ObservationContext & context)
+    out(static_cast<int>(i)) = scale_(static_cast<int>(i)) * value;
+  }
+}
+
+JointVelObservation::JointVelObservation(const ObservationConfig & config,
+                                         const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
+
+void JointVelObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
+
+  const std::vector<std::string> joints =
+    context.convention.resolveJoints(parameters, context.policyJointOrder);
+
+  indices_ = resolveControllerJointIndices(context, joints);
+  relativeToDefaultVelocity_ = readParameter<bool>(parameters, "relative_to_default_velocity", true);
+  scale_ = readScaleVector(parameters, "scale", static_cast<int>(indices_.size()), 1.0);
+
+  defaultVelocity_ = Eigen::VectorXd::Zero(static_cast<int>(indices_.size()));
+}
+
+void JointVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  for(size_t i = 0; i < indices_.size(); ++i)
+  {
+    const std::string & joint = context.controllerJointOrder[static_cast<size_t>(indices_[i])];
+    const int mbcIndex = context.observationRobot.jointIndexByName(joint);
+
+    double value = context.observationRobot.mbc().alpha[static_cast<size_t>(mbcIndex)][0];
+
+    if(relativeToDefaultVelocity_)
     {
-    mc_rtc::Configuration parameters =
-        context.convention.parametersFor(requestedType(), type(), config_.parameters);
-
-    const std::vector<std::string> joints =
-        context.convention.resolveJoints(parameters, context.policyJointOrder);
-
-    indices_ = resolveJointIndices(context, joints);
-    relativeToDefaultPose_ = readParameter<bool>(parameters, "relative_to_default_pose", true);
-    biased_ = readParameter<bool>(parameters, "biased", false);
-    scale_ = readScaleVector(parameters, "scale", static_cast<int>(indices_.size()), 1.0);
-
-    defaultPose_ = Eigen::VectorXd::Zero(static_cast<int>(indices_.size()));
-
-    for(size_t i = 0; i < indices_.size(); ++i)
-    {
-        defaultPose_(static_cast<int>(i)) = context.qZeroControllerOrder(indices_[i]);
-    }
-    }
-
-    void JointPosObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
-    {
-    for(size_t i = 0; i < indices_.size(); ++i)
-    {
-        const std::string & joint = context.controllerJointOrder[static_cast<size_t>(indices_[i])];
-        const int mbcIndex = context.realRobot.jointIndexByName(joint);
-
-        double value = context.realRobot.mbc().q[static_cast<size_t>(mbcIndex)][0];
-
-        if(relativeToDefaultPose_) { value -= defaultPose_(static_cast<int>(i)); }
-
-        out(static_cast<int>(i)) = scale_(static_cast<int>(i)) * value;
-    }
-    }
-
-    JointVelObservation::JointVelObservation(const ObservationConfig & config,
-                                            const ObservationConvention & convention)
-    : Observation(config, convention)
-    {
+      value -= defaultVelocity_(static_cast<int>(i));
     }
 
-    void JointVelObservation::configure(const ObservationContext & context)
-    {
-    mc_rtc::Configuration parameters =
-        context.convention.parametersFor(requestedType(), type(), config_.parameters);
+    out(static_cast<int>(i)) = scale_(static_cast<int>(i)) * value;
+  }
+}
 
-    const std::vector<std::string> joints =
-        context.convention.resolveJoints(parameters, context.policyJointOrder);
+ProjectedGravityObservation::ProjectedGravityObservation(const ObservationConfig & config,
+                                                         const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
 
-    indices_ = resolveJointIndices(context, joints);
-    relativeToDefaultVelocity_ = readParameter<bool>(parameters, "relative_to_default_velocity", true);
-    scale_ = readScaleVector(parameters, "scale", static_cast<int>(indices_.size()), 1.0);
+void ProjectedGravityObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
 
-    defaultVelocity_ = Eigen::VectorXd::Zero(static_cast<int>(indices_.size()));
-    }
+  const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
 
-    void JointVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
-    {
-    for(size_t i = 0; i < indices_.size(); ++i)
-    {
-        const std::string & joint = context.controllerJointOrder[static_cast<size_t>(indices_[i])];
-        const int mbcIndex = context.realRobot.jointIndexByName(joint);
+  if(!context.observationRobot.mb().hasBody(body))
+  {
+    mc_rtc::log::error_and_throw(
+      "[Observation:{}] Body '{}' does not exist on robot '{}'",
+      name(),
+      body,
+      context.observationRobot.name());
+  }
 
-        double value = context.realRobot.mbc().alpha[static_cast<size_t>(mbcIndex)][0];
+  bodyIndex_ = context.observationRobot.mb().bodyIndexByName(body);
+  scale_ = readScaleVector(parameters, "scale", 3, 1.0);
+}
 
-        if(relativeToDefaultVelocity_) { value -= defaultVelocity_(static_cast<int>(i)); }
+void ProjectedGravityObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  const sva::PTransformd & X_0_body =
+    context.observationRobot.mbc().bodyPosW[static_cast<size_t>(bodyIndex_)];
 
-        out(static_cast<int>(i)) = scale_(static_cast<int>(i)) * value;
-    }
-    }
+  const Eigen::Vector3d gravityWorld(0.0, 0.0, -1.0);
+  const Eigen::Vector3d gravityBody = X_0_body.rotation() * gravityWorld;
 
-    ProjectedGravityObservation::ProjectedGravityObservation(const ObservationConfig & config,
-                                                            const ObservationConvention & convention)
-    : Observation(config, convention)
-    {
-    }
+  writeScaledVector3(gravityBody, scale_, out);
+}
 
-    void ProjectedGravityObservation::configure(const ObservationContext & context)
-    {
-    mc_rtc::Configuration parameters =
-        context.convention.parametersFor(requestedType(), type(), config_.parameters);
+BaseAngVelObservation::BaseAngVelObservation(const ObservationConfig & config,
+                                             const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
 
-    const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
+void BaseAngVelObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
 
-    if(!context.realRobot.mb().hasBody(body))
-    {
-        mc_rtc::log::error_and_throw(
-        "[Observation:{}] Body '{}' does not exist on robot '{}'",
-        name(),
-        body,
-        context.realRobot.name());
-    }
+  const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
 
-    bodyIndex_ = context.realRobot.mb().bodyIndexByName(body);
-    scale_ = readScaleVector(parameters, "scale", 3, 1.0);
-    }
+  if(!context.observationRobot.mb().hasBody(body))
+  {
+    mc_rtc::log::error_and_throw(
+      "[Observation:{}] Body '{}' does not exist on robot '{}'",
+      name(),
+      body,
+      context.observationRobot.name());
+  }
 
-    void ProjectedGravityObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
-    {
-    const sva::PTransformd & X_0_body =
-        context.realRobot.mbc().bodyPosW[static_cast<size_t>(bodyIndex_)];
+  bodyIndex_ = context.observationRobot.mb().bodyIndexByName(body);
+  scale_ = readScaleVector(parameters, "scale", 3, 1.0);
+}
 
-    const Eigen::Vector3d gravityWorld(0.0, 0.0, -1.0);
-    const Eigen::VectorXd gravityBody = vector3ToVectorXd(X_0_body.rotation() * gravityWorld);
+void BaseAngVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  const Eigen::Vector3d value = context.observationRobot.mbc().bodyVelB[static_cast<size_t>(bodyIndex_)].angular();
+  writeScaledVector3(value, scale_, out);
+}
 
-    out = scale_.cwiseProduct(gravityBody);
-    }
+BaseLinVelObservation::BaseLinVelObservation(const ObservationConfig & config,
+                                             const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
 
-    BaseAngVelObservation::BaseAngVelObservation(const ObservationConfig & config,
-                                                const ObservationConvention & convention)
-    : Observation(config, convention)
-    {
-    }
+void BaseLinVelObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
 
-    void BaseAngVelObservation::configure(const ObservationContext & context)
-    {
-    mc_rtc::Configuration parameters =
-        context.convention.parametersFor(requestedType(), type(), config_.parameters);
+  const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
 
-    const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
+  if(!context.observationRobot.mb().hasBody(body))
+  {
+    mc_rtc::log::error_and_throw(
+      "[Observation:{}] Body '{}' does not exist on robot '{}'",
+      name(),
+      body,
+      context.observationRobot.name());
+  }
 
-    if(!context.realRobot.mb().hasBody(body))
-    {
-        mc_rtc::log::error_and_throw(
-        "[Observation:{}] Body '{}' does not exist on robot '{}'",
-        name(),
-        body,
-        context.realRobot.name());
-    }
+  bodyIndex_ = context.observationRobot.mb().bodyIndexByName(body);
+  scale_ = readScaleVector(parameters, "scale", 3, 1.0);
+}
 
-    bodyIndex_ = context.realRobot.mb().bodyIndexByName(body);
-    scale_ = readScaleVector(parameters, "scale", 3, 1.0);
-    }
+void BaseLinVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  const Eigen::Vector3d value = context.observationRobot.mbc().bodyVelB[static_cast<size_t>(bodyIndex_)].linear();
+  writeScaledVector3(value, scale_, out);
+}
 
-    void BaseAngVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
-    {
-    const Eigen::VectorXd value =
-        vector3ToVectorXd(context.realRobot.mbc().bodyVelB[static_cast<size_t>(bodyIndex_)].angular());
+LastActionObservation::LastActionObservation(const ObservationConfig & config,
+                                             const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
 
-    out = scale_.cwiseProduct(value);
-    }
+void LastActionObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
 
-    BaseLinVelObservation::BaseLinVelObservation(const ObservationConfig & config,
-                                                const ObservationConvention & convention)
-    : Observation(config, convention)
-    {
-    }
+  size_ = readParameter<int>(parameters, "size", static_cast<int>(context.lastActionPolicyOrder.size()));
 
-    void BaseLinVelObservation::configure(const ObservationContext & context)
-    {
-    mc_rtc::Configuration parameters =
-        context.convention.parametersFor(requestedType(), type(), config_.parameters);
+  if(size_ != context.lastActionPolicyOrder.size())
+  {
+    mc_rtc::log::error_and_throw(
+      "[Observation:{}] Configured size ({}) does not match current action size ({})",
+      name(),
+      size_,
+      context.lastActionPolicyOrder.size());
+  }
 
-    const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
+  scale_ = readScaleVector(parameters, "scale", size_, 1.0);
+}
 
-    if(!context.realRobot.mb().hasBody(body))
-    {
-        mc_rtc::log::error_and_throw(
-        "[Observation:{}] Body '{}' does not exist on robot '{}'",
-        name(),
-        body,
-        context.realRobot.name());
-    }
+void LastActionObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  out = scale_.cwiseProduct(context.lastActionPolicyOrder);
+}
 
-    bodyIndex_ = context.realRobot.mb().bodyIndexByName(body);
-    scale_ = readScaleVector(parameters, "scale", 3, 1.0);
-    }
+CommandObservation::CommandObservation(const ObservationConfig & config,
+                                       const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
 
-    void BaseLinVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
-    {
-    const Eigen::VectorXd value =
-        vector3ToVectorXd(context.realRobot.mbc().bodyVelB[static_cast<size_t>(bodyIndex_)].linear());
+void CommandObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
 
-    out = scale_.cwiseProduct(value);
-    }
+  size_ = readParameter<int>(parameters, "size", 3);
 
-    LastActionObservation::LastActionObservation(const ObservationConfig & config,
-                                                const ObservationConvention & convention)
-    : Observation(config, convention)
-    {
-    }
+  if(size_ <= 0 || size_ > 3)
+  {
+    mc_rtc::log::error_and_throw(
+      "[Observation:{}] Command observation supports size in [1, 3], got {}",
+      name(),
+      size_);
+  }
 
-    void LastActionObservation::configure(const ObservationContext & context)
-    {
-    mc_rtc::Configuration parameters =
-        context.convention.parametersFor(requestedType(), type(), config_.parameters);
+  scale_ = readScaleVector(parameters, "scale", size_, 1.0);
+}
 
-    size_ = readParameter<int>(parameters, "size", static_cast<int>(context.lastActionPolicyOrder.size()));
+void CommandObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  for(int i = 0; i < size_; ++i)
+  {
+    out(i) = scale_(i) * context.command(i);
+  }
+}
 
-    if(size_ != context.lastActionPolicyOrder.size())
-    {
-        mc_rtc::log::error_and_throw(
-        "[Observation:{}] Configured size ({}) does not match current action size ({})",
-        name(),
-        size_,
-        context.lastActionPolicyOrder.size());
-    }
-
-    scale_ = readScaleVector(parameters, "scale", size_, 1.0);
-    }
-
-    void LastActionObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
-    {
-    out = scale_.cwiseProduct(context.lastActionPolicyOrder);
-    }
-
-    CommandObservation::CommandObservation(const ObservationConfig & config,
-                                        const ObservationConvention & convention)
-    : Observation(config, convention)
-    {
-    }
-
-    void CommandObservation::configure(const ObservationContext & context)
-    {
-    mc_rtc::Configuration parameters =
-        context.convention.parametersFor(requestedType(), type(), config_.parameters);
-
-    size_ = readParameter<int>(parameters, "size", 3);
-
-    if(size_ <= 0 || size_ > 3)
-    {
-        mc_rtc::log::error_and_throw(
-        "[Observation:{}] Command observation supports size in [1, 3], got {}",
-        name(),
-        size_);
-    }
-
-    scale_ = readScaleVector(parameters, "scale", size_, 1.0);
-    }
-
-    void CommandObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
-    {
-    for(int i = 0; i < size_; ++i)
-    {
-        out(i) = scale_(i) * context.command(i);
-    }
-    }
 } // namespace rlqp

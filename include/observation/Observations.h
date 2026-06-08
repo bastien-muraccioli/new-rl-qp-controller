@@ -4,119 +4,126 @@
 
 #include <Eigen/Core>
 
-#include <mc_rbdyn/Robot.h>
 #include <mc_rtc/Configuration.h>
 
-#include <functional>
-#include <map>
-#include <memory>
 #include <string>
 #include <vector>
 
-struct NewRLQPController;
-
 namespace rlqp
 {
-    class JointPosObservation : public Observation
-    {
-    public:
-    JointPosObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
-    void configure(const ObservationContext & context) override;
-    int size() const override { return static_cast<int>(indices_.size()); }
-    void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+/** @brief Joint position observation, optionally relative to q_zero. */
+class JointPosObservation : public Observation
+{
+public:
+  JointPosObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
-    private:
-    std::vector<int> indices_;
-    bool relativeToDefaultPose_ = true;
-    bool biased_ = false;
-    Eigen::VectorXd defaultPose_;
-    Eigen::VectorXd scale_;
-    };
+  void configure(const ObservationContext & context) override;
+  int size() const override { return static_cast<int>(indices_.size()); }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
 
-    class JointVelObservation : public Observation
-    {
-    public:
-    JointVelObservation(const ObservationConfig & config, const ObservationConvention & convention);
+private:
+  std::vector<int> indices_;
+  bool relativeToDefaultPose_ = true;
+  Eigen::VectorXd defaultPose_;
+  Eigen::VectorXd scale_;
+};
 
-    void configure(const ObservationContext & context) override;
-    int size() const override { return static_cast<int>(indices_.size()); }
-    void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+/** @brief Joint velocity observation, optionally relative to a default velocity. */
+class JointVelObservation : public Observation
+{
+public:
+  JointVelObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
-    private:
-    std::vector<int> indices_;
-    bool relativeToDefaultVelocity_ = true;
-    Eigen::VectorXd defaultVelocity_;
-    Eigen::VectorXd scale_;
-    };
+  void configure(const ObservationContext & context) override;
+  int size() const override { return static_cast<int>(indices_.size()); }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
 
-    class ProjectedGravityObservation : public Observation
-    {
-    public:
-    ProjectedGravityObservation(const ObservationConfig & config, const ObservationConvention & convention);
+private:
+  std::vector<int> indices_;
+  bool relativeToDefaultVelocity_ = true;
+  Eigen::VectorXd defaultVelocity_;
+  Eigen::VectorXd scale_;
+};
 
-    void configure(const ObservationContext & context) override;
-    int size() const override { return 3; }
-    void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+/** @brief Projected gravity in the configured base body frame. */
+class ProjectedGravityObservation : public Observation
+{
+public:
+  ProjectedGravityObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
-    private:
-    int bodyIndex_ = -1;
-    Eigen::VectorXd scale_;
-    };
+  void configure(const ObservationContext & context) override;
+  int size() const override { return 3; }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
 
-    class BaseAngVelObservation : public Observation
-    {
-    public:
-    BaseAngVelObservation(const ObservationConfig & config, const ObservationConvention & convention);
+private:
+  int bodyIndex_ = -1;
+  Eigen::VectorXd scale_;
+};
 
-    void configure(const ObservationContext & context) override;
-    int size() const override { return 3; }
-    void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+/** @brief Base angular velocity in the configured base body frame. */
+class BaseAngVelObservation : public Observation
+{
+public:
+  BaseAngVelObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
-    private:
-    int bodyIndex_ = -1;
-    Eigen::VectorXd scale_;
-    };
+  void configure(const ObservationContext & context) override;
+  int size() const override { return 3; }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
 
-    class BaseLinVelObservation : public Observation
-    {
-    public:
-    BaseLinVelObservation(const ObservationConfig & config, const ObservationConvention & convention);
+private:
+  int bodyIndex_ = -1;
+  Eigen::VectorXd scale_;
+};
 
-    void configure(const ObservationContext & context) override;
-    int size() const override { return 3; }
-    void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+/** @brief Base linear velocity in the configured base body frame. */
+class BaseLinVelObservation : public Observation
+{
+public:
+  BaseLinVelObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
-    private:
-    int bodyIndex_ = -1;
-    Eigen::VectorXd scale_;
-    };
+  void configure(const ObservationContext & context) override;
+  int size() const override { return 3; }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
 
-    class LastActionObservation : public Observation
-    {
-    public:
-    LastActionObservation(const ObservationConfig & config, const ObservationConvention & convention);
+private:
+  int bodyIndex_ = -1;
+  Eigen::VectorXd scale_;
+};
 
-    void configure(const ObservationContext & context) override;
-    int size() const override { return size_; }
-    void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+/**
+ * @brief Last raw policy action.
+ *
+ * This is a normal observation entry. If observations.yaml sets history > 1,
+ * ObservationManager buffers previous last_action samples exactly like joint_pos.
+ */
+class LastActionObservation : public Observation
+{
+public:
+  LastActionObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
-    private:
-    int size_ = 0;
-    Eigen::VectorXd scale_;
-    };
+  void configure(const ObservationContext & context) override;
+  int size() const override { return size_; }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
 
-    class CommandObservation : public Observation
-    {
-    public:
-    CommandObservation(const ObservationConfig & config, const ObservationConvention & convention);
+private:
+  int size_ = 0;
+  Eigen::VectorXd scale_;
+};
 
-    void configure(const ObservationContext & context) override;
-    int size() const override { return size_; }
-    void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+/** @brief Command observation, usually vx/vy/yaw_rate. */
+class CommandObservation : public Observation
+{
+public:
+  CommandObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
-    private:
-    int size_ = 3;
-    Eigen::VectorXd scale_;
-    };
+  void configure(const ObservationContext & context) override;
+  int size() const override { return size_; }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+
+private:
+  int size_ = 3;
+  Eigen::VectorXd scale_;
+};
+
 } // namespace rlqp

@@ -134,7 +134,6 @@ ObservationConfig ObservationManager::parseObservationConfig(const mc_rtc::Confi
 {
   ObservationConfig out;
 
-  out.raw = config;
   out.requestedType = config("type", std::string(""));
 
   if(out.requestedType.empty())
