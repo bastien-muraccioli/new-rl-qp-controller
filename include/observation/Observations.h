@@ -91,12 +91,7 @@ private:
   Eigen::VectorXd scale_;
 };
 
-/**
- * @brief Last raw policy action.
- *
- * This is a normal observation entry. If observations.yaml sets history > 1,
- * ObservationManager buffers previous last_action samples exactly like joint_pos.
- */
+/** @brief Last raw policy action. */
 class LastActionObservation : public Observation
 {
 public:

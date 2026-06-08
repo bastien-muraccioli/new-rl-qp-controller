@@ -70,20 +70,20 @@ void ObservationManager::configure(const ObservationContext & context)
   }
 }
 
-void ObservationManager::resetHistory(const ObservationContext & context)
+void ObservationManager::updateHistory(const ObservationContext & context)
 {
   for(size_t i = 0; i < entries_.size(); ++i)
   {
     Entry & entry = entries_[i];
 
-    entry.history.clear();
+    entry.historyBuffer.clear();
 
     Eigen::VectorXd current = Eigen::VectorXd::Zero(entry.observation->size());
     entry.observation->compute(context, current);
 
     for(int h = 0; h < entry.observation->history(); ++h)
     {
-      entry.history.push_back(current);
+      entry.historyBuffer.push_back(current);
     }
   }
 }
@@ -100,23 +100,23 @@ Eigen::VectorXd ObservationManager::compute(const ObservationContext & context)
     Eigen::VectorXd current = Eigen::VectorXd::Zero(entry.observation->size());
     entry.observation->compute(context, current);
 
-    if(!entry.history.empty() && entry.history.front().size() != current.size())
+    if(!entry.historyBuffer.empty() && entry.historyBuffer.front().size() != current.size())
     {
       mc_rtc::log::error_and_throw(
         "[ObservationManager] Observation '{}' changed dimension from {} to {}",
         entry.observation->name(),
-        entry.history.front().size(),
+        entry.historyBuffer.front().size(),
         current.size());
     }
 
-    entry.history.push_front(current);
+    entry.historyBuffer.push_front(current);
 
     while(static_cast<int>(entry.history.size()) > entry.observation->history())
     {
-      entry.history.pop_back();
+      entry.historyBuffer.pop_back();
     }
 
-    Eigen::VectorXd stacked = flattenHistoryOldestFirst(entry);
+    Eigen::VectorXd stacked = flattenHistory(entry);
 
     out.segment(offset, stacked.size()) = stacked;
     offset += static_cast<int>(stacked.size());
@@ -165,20 +165,20 @@ ObservationConfig ObservationManager::parseObservationConfig(const mc_rtc::Confi
   return out;
 }
 
-Eigen::VectorXd ObservationManager::flattenHistoryOldestFirst(const Entry & entry) const
+Eigen::VectorXd ObservationManager::flattenHistory(const Entry & entry) const
 {
   int total = 0;
 
-  for(size_t i = 0; i < entry.history.size(); ++i)
+  for(size_t i = 0; i < entry.historyBuffer.size(); ++i)
   {
-    total += static_cast<int>(entry.history[i].size());
+    total += static_cast<int>(entry.historyBuffer[i].size());
   }
 
   Eigen::VectorXd out = Eigen::VectorXd::Zero(total);
   int offset = 0;
 
-  for(std::deque<Eigen::VectorXd>::const_reverse_iterator it = entry.history.rbegin();
-      it != entry.history.rend();
+  for(std::deque<Eigen::VectorXd>::const_reverse_iterator it = entry.historyBuffer.rbegin();
+      it != entry.historyBuffer.rend();
       ++it)
   {
     out.segment(offset, it->size()) = *it;

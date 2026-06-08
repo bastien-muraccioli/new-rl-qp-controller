@@ -9,20 +9,11 @@
 namespace rlqp
 {
 
-namespace
-{
+//============================================================================//
+// JointPosObservation
+//============================================================================//
 
-void writeScaledVector3(const Eigen::Vector3d & value,
-                        const Eigen::VectorXd & scale,
-                        Eigen::Ref<Eigen::VectorXd> out)
-{
-  out(0) = scale(0) * value(0);
-  out(1) = scale(1) * value(1);
-  out(2) = scale(2) * value(2);
-}
-
-} // namespace
-
+...
 JointPosObservation::JointPosObservation(const ObservationConfig & config,
                                          const ObservationConvention & convention)
 : Observation(config, convention)
@@ -67,6 +58,10 @@ void JointPosObservation::compute(const ObservationContext & context, Eigen::Ref
   }
 }
 
+//============================================================================//
+// JointVelObservation
+//============================================================================//
+
 JointVelObservation::JointVelObservation(const ObservationConfig & config,
                                          const ObservationConvention & convention)
 : Observation(config, convention)
@@ -106,6 +101,10 @@ void JointVelObservation::compute(const ObservationContext & context, Eigen::Ref
   }
 }
 
+//============================================================================//
+// ProjectedGravityObservation
+//============================================================================//
+
 ProjectedGravityObservation::ProjectedGravityObservation(const ObservationConfig & config,
                                                          const ObservationConvention & convention)
 : Observation(config, convention)
@@ -140,8 +139,12 @@ void ProjectedGravityObservation::compute(const ObservationContext & context, Ei
   const Eigen::Vector3d gravityWorld(0.0, 0.0, -1.0);
   const Eigen::Vector3d gravityBody = X_0_body.rotation() * gravityWorld;
 
-  writeScaledVector3(gravityBody, scale_, out);
+  out = [gravityBody[0]*scale_[0], gravityBody[1]*scale_[1], gravityBody[2]*scale[2]];
 }
+
+//============================================================================//
+// BaseAngVelObservation
+//============================================================================//
 
 BaseAngVelObservation::BaseAngVelObservation(const ObservationConfig & config,
                                              const ObservationConvention & convention)
@@ -173,7 +176,12 @@ void BaseAngVelObservation::compute(const ObservationContext & context, Eigen::R
 {
   const Eigen::Vector3d value = context.observationRobot.mbc().bodyVelB[static_cast<size_t>(bodyIndex_)].angular();
   writeScaledVector3(value, scale_, out);
+  out = [value[0]*scale_[0], value[1]*scale_[1], value[2]*scale_[2]];
 }
+
+//============================================================================//
+// BaseLinVelObservation
+//============================================================================//
 
 BaseLinVelObservation::BaseLinVelObservation(const ObservationConfig & config,
                                              const ObservationConvention & convention)
@@ -207,6 +215,10 @@ void BaseLinVelObservation::compute(const ObservationContext & context, Eigen::R
   writeScaledVector3(value, scale_, out);
 }
 
+//============================================================================//
+// LastActionObservation
+//============================================================================//
+
 LastActionObservation::LastActionObservation(const ObservationConfig & config,
                                              const ObservationConvention & convention)
 : Observation(config, convention)
@@ -236,6 +248,10 @@ void LastActionObservation::compute(const ObservationContext & context, Eigen::R
 {
   out = scale_.cwiseProduct(context.lastActionPolicyOrder);
 }
+
+//============================================================================//
+// CommandObservation
+//============================================================================//
 
 CommandObservation::CommandObservation(const ObservationConfig & config,
                                        const ObservationConvention & convention)

@@ -342,7 +342,7 @@ void RLPolicyRuntime::resetObservationHistory(NewRLQPController & ctl)
 
   ObservationContext context = makeObservationContext(ctl);
 
-  observationManager_.resetHistory(context);
+  observationManager_.updateHistory(context);
   currentObservation_ = observationManager_.compute(context);
 }
 

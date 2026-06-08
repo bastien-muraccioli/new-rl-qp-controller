@@ -20,6 +20,22 @@ struct NewRLQPController;
 namespace rlqp
 {
 
+  /**
+ * @brief Runtime owner of the active RL policy session.
+ *
+ * Responsibilities:
+ *
+ * - Load and switch policies.
+ * - Own the ONNX inference backend.
+ * - Own the ObservationManager.
+ * - Build observation vectors.
+ * - Execute policy inference.
+ * - Convert policy outputs into q_rl targets.
+ * - Manage policy gains and action scaling.
+ *
+ * NewRLQPController remains responsible for the mc_rtc lifecycle.
+ * RLPolicyRuntime owns everything that is policy-dependent.
+ */
 class RLPolicyRuntime
 {
 public:
@@ -104,11 +120,15 @@ private:
 private:
   mc_rtc::Configuration controllerConfig_;
 
+  /** Available policy configurations. */
   PolicyManager policyManager_;
+  /** Observation type factory registry. */
   ObservationRegistry observationRegistry_;
+  /** Active observation pipeline. */
   ObservationManager observationManager_;
+  /** Active training-environment convention. */
   ObservationConvention activeConvention_;
-
+  /** Active ONNX policy instance. */
   std::unique_ptr<RLPolicyInterface> policy_;
 
   std::string robotName_;

@@ -25,8 +25,7 @@ public:
   /**
    * @brief Load observation declarations from observations.yaml.
    *
-   * This does not resolve robot-dependent indices yet. Call configure() after
-   * the runtime has a valid ObservationContext.
+   * Call configure() after the runtime has a valid ObservationContext.
    */
   void load(const mc_rtc::Configuration & observationsConfig,
             const mc_rtc::Configuration & controllerConfig,
@@ -36,12 +35,12 @@ public:
   void configure(const ObservationContext & context);
 
   /** @brief Fill all history buffers with the current observation values. */
-  void resetHistory(const ObservationContext & context);
+  void updateHistory(const ObservationContext & context);
 
   /** @brief Compute the full flattened observation vector. */
   Eigen::VectorXd compute(const ObservationContext & context);
 
-  /** @brief Full flattened observation size, including history. */
+  /** @brief Full flattened observation size */
   int size() const;
 
   /** @brief Active convention name. */
@@ -51,14 +50,14 @@ private:
   struct Entry
   {
     std::shared_ptr<Observation> observation;
-    std::deque<Eigen::VectorXd> history;
+    std::deque<Eigen::VectorXd> historyBuffer;
   };
 
 private:
   ObservationConfig parseObservationConfig(const mc_rtc::Configuration & config,
                                            int defaultHistory) const;
 
-  Eigen::VectorXd flattenHistoryOldestFirst(const Entry & entry) const;
+  Eigen::VectorXd flattenHistory(const Entry & entry) const;
 
 private:
   std::vector<Entry> entries_;
