@@ -1,6 +1,6 @@
 #include "NewRLQPController_Initial.h"
 
-#include "../NewRLQPController.h"
+#include <NewRLQPController.h>
 
 void NewRLQPController_Initial::configure(const mc_rtc::Configuration & config) {}
 

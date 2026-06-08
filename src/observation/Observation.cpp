@@ -1,5 +1,6 @@
 #include "observation/Observation.h"
 #include "observation/Observations.h"
+#include "common/ConfigurationHelpers.h"
 
 #include <algorithm>
 #include <sstream>
@@ -11,36 +12,6 @@ namespace rlqp
 
 namespace
 {
-
-std::string joinPath(const std::string & lhs, const std::string & rhs)
-{
-  if(lhs.empty())
-  {
-    return rhs;
-  }
-
-  if(lhs[lhs.size() - 1] == '/')
-  {
-    return lhs + rhs;
-  }
-
-  return lhs + "/" + rhs;
-}
-
-mc_rtc::Configuration loadConventionRoot(const mc_rtc::Configuration & controllerConfig)
-{
-  if(controllerConfig.has("conventions"))
-  {
-    return controllerConfig;
-  }
-
-  const std::string policiesRoot = controllerConfig("policies_root", std::string("policies"));
-  const std::string conventionsPath = joinPath(policiesRoot, "conventions.yaml");
-
-  mc_rtc::Configuration conventionsConfig;
-  conventionsConfig.load(conventionsPath);
-  return conventionsConfig;
-}
 
 int controllerJointIndex(const std::vector<std::string> & controllerJointOrder,
                          const std::string & jointName)
@@ -87,7 +58,7 @@ ObservationConvention ObservationConvention::fromConfig(const mc_rtc::Configurat
   ObservationConvention out;
   out.name = conventionName;
 
-  mc_rtc::Configuration conventionRoot = loadConventionRoot(controllerConfig);
+  mc_rtc::Configuration conventionRoot = config::loadConventionRoot(controllerConfig);
 
   if(!conventionRoot.has("conventions"))
   {

@@ -1,141 +1,16 @@
 #include "policy/PolicyConfig.h"
+#include "common/ConfigurationHelpers.h"
 
 #include <mc_rtc/logging.h>
 
 #include <algorithm>
 #include <cmath>
-#include <dirent.h>
-#include <fstream>
-#include <sys/stat.h>
 
 namespace rlqp
 {
 
 namespace
 {
-
-std::string joinPath(const std::string & lhs, const std::string & rhs)
-{
-  if(lhs.empty())
-  {
-    return rhs;
-  }
-
-  if(lhs[lhs.size() - 1] == '/')
-  {
-    return lhs + rhs;
-  }
-
-  return lhs + "/" + rhs;
-}
-
-std::string basenameWithoutExtension(const std::string & path)
-{
-  std::string base = path;
-
-  const size_t slash = base.find_last_of('/');
-  if(slash != std::string::npos)
-  {
-    base = base.substr(slash + 1);
-  }
-
-  const size_t dot = base.find_last_of('.');
-  if(dot != std::string::npos)
-  {
-    base = base.substr(0, dot);
-  }
-
-  return base;
-}
-
-bool fileExists(const std::string & path)
-{
-  std::ifstream file(path.c_str());
-  return file.good();
-}
-
-bool isDirectory(const std::string & path)
-{
-  struct stat status;
-  if(stat(path.c_str(), &status) != 0)
-  {
-    return false;
-  }
-  return S_ISDIR(status.st_mode);
-}
-
-std::vector<std::string> discoverPolicyFolders(const std::string & policiesRoot)
-{
-  std::vector<std::string> folders;
-
-  DIR * dir = opendir(policiesRoot.c_str());
-  if(!dir)
-  {
-    mc_rtc::log::error_and_throw(
-      "[PolicyManager] Could not open policies_root '{}'",
-      policiesRoot);
-  }
-
-  struct dirent * entry = nullptr;
-  while((entry = readdir(dir)) != nullptr)
-  {
-    const std::string name = entry->d_name;
-    if(name == "." || name == "..")
-    {
-      continue;
-    }
-
-    const std::string folder = joinPath(policiesRoot, name);
-    if(!isDirectory(folder))
-    {
-      continue;
-    }
-
-    if(fileExists(joinPath(folder, "policy.yaml")) && fileExists(joinPath(folder, "observations.yaml")))
-    {
-      folders.push_back(folder);
-    }
-  }
-
-  closedir(dir);
-  std::sort(folders.begin(), folders.end());
-  return folders;
-}
-
-std::map<std::string, double> readRequiredMap(const mc_rtc::Configuration & config,
-                                              const std::string & key,
-                                              const std::string & policyName)
-{
-  if(!config.has(key))
-  {
-    mc_rtc::log::error_and_throw("[PolicyConfig:{}] Missing required map '{}'", policyName, key);
-  }
-
-  return config(key, std::map<std::string, double>());
-}
-
-std::map<std::string, double> readOptionalMap(const mc_rtc::Configuration & config,
-                                              const std::string & key)
-{
-  if(!config.has(key))
-  {
-    return std::map<std::string, double>();
-  }
-
-  return config(key, std::map<std::string, double>());
-}
-
-std::vector<std::string> readRequiredStringVector(const mc_rtc::Configuration & config,
-                                                  const std::string & key,
-                                                  const std::string & policyName)
-{
-  if(!config.has(key))
-  {
-    mc_rtc::log::error_and_throw("[PolicyConfig:{}] Missing required list '{}'", policyName, key);
-  }
-
-  return config(key, std::vector<std::string>());
-}
 
 void validateMapContains(const std::map<std::string, double> & values,
                          const std::string & mapName,
@@ -164,17 +39,17 @@ PolicyConfig PolicyConfig::load(const std::string & policyFolder)
   PolicyConfig out;
 
   out.folder = policyFolder;
-  out.policyYamlPath = joinPath(policyFolder, "policy.yaml");
-  out.observationsYamlPath = joinPath(policyFolder, "observations.yaml");
+  out.policyYamlPath = config::joinPath(policyFolder, "policy.yaml");
+  out.observationsYamlPath = config::joinPath(policyFolder, "observations.yaml");
 
   out.rawPolicy.load(out.policyYamlPath);
   out.rawObservations.load(out.observationsYamlPath);
 
-  out.name = out.rawPolicy("name", basenameWithoutExtension(policyFolder));
+  out.name = out.rawPolicy("name", config::basenameWithoutExtension(policyFolder));
 
   const std::string defaultOnnxName = out.name + ".onnx";
   const std::string onnxFile = out.rawPolicy("onnx", defaultOnnxName);
-  out.onnxPath = joinPath(policyFolder, onnxFile);
+  out.onnxPath = config::joinPath(policyFolder, onnxFile);
 
   if(out.rawPolicy.has("control"))
   {
@@ -186,8 +61,8 @@ PolicyConfig PolicyConfig::load(const std::string & policyFolder)
     out.kpScale = control("kp_scale", out.rawPolicy("pd_gains_ratio", 1.0));
     out.kdScale = control("kd_scale", std::sqrt(out.kpScale));
 
-    out.kp = readOptionalMap(control, "kp");
-    out.kd = readOptionalMap(control, "kd");
+    out.kp = config::readOr<std::map<std::string, double> >(control, "kp", std::map<std::string, double>());
+    out.kd = config::readOr<std::map<std::string, double> >(control, "kd", std::map<std::string, double>());
   }
   else
   {
@@ -205,18 +80,18 @@ PolicyConfig PolicyConfig::load(const std::string & policyFolder)
 
   const mc_rtc::Configuration action = out.rawPolicy("action");
 
-  out.actionJoints = readRequiredStringVector(action, "joints", out.name);
-  out.actionScale = readRequiredMap(action, "scale", out.name);
-  out.defaultPosition = readRequiredMap(action, "default_position", out.name);
+  out.actionJoints = config::readRequired<std::vector<std::string> >(action, "joints", "PolicyConfig:" + out.name);
+  out.actionScale = config::readRequired<std::map<std::string, double> >(action, "scale", "PolicyConfig:" + out.name);
+  out.defaultPosition = config::readRequired<std::map<std::string, double> >(action, "default_position", "PolicyConfig:" + out.name);
 
   if(out.kp.empty())
   {
-    out.kp = readOptionalMap(out.rawPolicy, "kp");
+    out.kp = config::readOr<std::map<std::string, double> >(out.rawPolicy, "kp", std::map<std::string, double>());
   }
 
   if(out.kd.empty())
   {
-    out.kd = readOptionalMap(out.rawPolicy, "kd");
+    out.kd = config::readOr<std::map<std::string, double> >(out.rawPolicy, "kd", std::map<std::string, double>());
   }
 
   out.validate();
@@ -286,7 +161,8 @@ void PolicyManager::load(const mc_rtc::Configuration & controllerConfig)
   currentName_.clear();
 
   const std::string policiesRoot = controllerConfig("policies_root", std::string("policies"));
-  const std::vector<std::string> folders = discoverPolicyFolders(policiesRoot);
+  const std::vector<std::string> folders =
+    config::listPolicies(policiesRoot, {"policy.yaml", "observations.yaml"});
 
   if(folders.empty())
   {

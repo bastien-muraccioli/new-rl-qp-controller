@@ -12,22 +12,27 @@ find_library(ONNXRUNTIME_LIB
 
 set(controller_SRC
   NewRLQPController.cpp
-  Observation.cpp
-  ObservationManager.cpp
-  PolicyConfig.cpp
-  RLPolicyInterface.cpp
-  RLPolicyRuntime.cpp
-  RLStateRunner.cpp
+  ConfigurationHelpers.cpp
+  observation/Observation.cpp
+  observation/Observations.cpp
+  observation/ObservationManager.cpp
+  policy/PolicyConfig.cpp
+  policy/RLPolicyInterface.cpp
+  policy/RLPolicyRuntime.cpp
+  policy/RLStateRunner.cpp
 )
 
 set(controller_HDR
-  NewRLQPController.h
-  Observation.h
-  ObservationManager.h
-  PolicyConfig.h
-  RLPolicyInterface.h
-  RLPolicyRuntime.h
-  RLStateRunner.h
+  ../include/NewRLQPController.h
+  ../include/api.h
+  ../include/ConfigurationHelpers.h
+  ../include/observation/Observation.h
+  ../include/observation/Observations.h
+  ../include/observation/ObservationManager.h
+  ../include/policy/PolicyConfig.h
+  ../include/policy/RLPolicyInterface.h
+  ../include/policy/RLPolicyRuntime.h
+  ../include/policy/RLStateRunner.h
 )
 
 add_library(${PROJECT_NAME} SHARED ${controller_SRC} ${controller_HDR})
@@ -39,13 +44,6 @@ target_link_libraries(${PROJECT_NAME} PUBLIC mc_rtc::mc_control_fsm)
 target_link_libraries(${PROJECT_NAME}
   PUBLIC
     ${ONNXRUNTIME_LIB}
-)
-
-target_include_directories(${PROJECT_NAME}
-  PUBLIC
-    $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}>
-    $<BUILD_INTERFACE:${ONNXRUNTIME_INCLUDE_DIR}>
-    $<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/${PROJECT_NAME}>
 )
 
 target_include_directories(${PROJECT_NAME}
