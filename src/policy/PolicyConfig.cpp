@@ -9,31 +9,6 @@
 namespace rlqp
 {
 
-namespace
-{
-
-void validateMapContains(const std::map<std::string, double> & values,
-                         const std::string & mapName,
-                         const std::vector<std::string> & joints,
-                         const std::string & policyName)
-{
-  for(size_t i = 0; i < joints.size(); ++i)
-  {
-    const std::string & joint = joints[i];
-
-    if(values.find(joint) == values.end())
-    {
-      mc_rtc::log::error_and_throw(
-        "[PolicyConfig:{}] Map '{}' is missing required joint '{}'",
-        policyName,
-        mapName,
-        joint);
-    }
-  }
-}
-
-} // namespace
-
 PolicyConfig PolicyConfig::load(const std::string & policyFolder)
 {
   PolicyConfig out;
@@ -80,9 +55,43 @@ PolicyConfig PolicyConfig::load(const std::string & policyFolder)
 
   const mc_rtc::Configuration action = out.rawPolicy("action");
 
-  out.actionJoints = config::readRequired<std::vector<std::string> >(action, "joints", "PolicyConfig:" + out.name);
-  out.actionScale = config::readRequired<std::map<std::string, double> >(action, "scale", "PolicyConfig:" + out.name);
-  out.defaultPosition = config::readRequired<std::map<std::string, double> >(action, "default_position", "PolicyConfig:" + out.name);
+  if(!action.has("joints"))
+  {
+    mc_rtc::log::error_and_throw("[PolicyConfig:{}] Missing required field 'action.joints'", out.name);
+  }
+
+  try
+  {
+    action("joints", out.actionJointGroup);
+  }
+  catch(...)
+  {
+  }
+
+  if(out.actionJointGroup.empty())
+  {
+    out.actionJoints = config::readRequired<std::vector<std::string> >(action, "joints", "PolicyConfig:" + out.name);
+  }
+
+  try
+  {
+    out.actionScale = config::readOr<std::map<std::string, double> >(action, "scale", std::map<std::string, double>());
+  }
+  catch(...)
+  {
+    /* action.scale may be a scalar. It is read later by RLPolicyRuntime when
+     * the action joint order has been resolved. */
+  }
+
+  try
+  {
+    out.defaultPosition = config::readOr<std::map<std::string, double> >(action, "default_position", std::map<std::string, double>());
+  }
+  catch(...)
+  {
+    /* action.default_position may be a scalar. It is read later by
+     * RLPolicyRuntime when the action joint order has been resolved. */
+  }
 
   if(out.kp.empty())
   {
@@ -115,22 +124,9 @@ void PolicyConfig::validate() const
     mc_rtc::log::error_and_throw("[PolicyConfig:{}] ONNX path cannot be empty", name);
   }
 
-  if(actionJoints.empty())
+  if(actionJointGroup.empty() && actionJoints.empty())
   {
     mc_rtc::log::error_and_throw("[PolicyConfig:{}] action.joints cannot be empty", name);
-  }
-
-  validateMapContains(actionScale, "action.scale", actionJoints, name);
-  validateMapContains(defaultPosition, "action.default_position", actionJoints, name);
-
-  if(!kp.empty())
-  {
-    validateMapContains(kp, "kp", actionJoints, name);
-  }
-
-  if(!kd.empty())
-  {
-    validateMapContains(kd, "kd", actionJoints, name);
   }
 
   if(policyStepSize <= 0.0)
@@ -246,6 +242,9 @@ void PolicyManager::selectNext()
   currentName_ = *it;
 }
 
-std::vector<std::string> PolicyManager::names() const { return orderedNames_; }
+std::vector<std::string> PolicyManager::names() const
+{
+  return orderedNames_;
+}
 
 } // namespace rlqp

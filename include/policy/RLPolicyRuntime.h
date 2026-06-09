@@ -94,8 +94,6 @@ private:
                   NewRLQPController & ctl,
                   const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask);
 
-  void validatePolicyAgainstRobot(const PolicyConfig & policy, NewRLQPController & ctl) const;
-
   void configureControl(const PolicyConfig & policy,
                         NewRLQPController & ctl,
                         const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask);
@@ -111,7 +109,7 @@ private:
   ObservationContext makeObservationContext(NewRLQPController & ctl);
   mc_rbdyn::Robot & selectedObservationRobot(NewRLQPController & ctl);
 
-  int jointIndexInOrder(const std::vector<std::string> & order, const std::string & joint) const;
+  int controllerJointIndex(const std::string & joint) const;
 
   double mapValueOrThrow(const std::map<std::string, double> & values,
                          const std::string & key,
@@ -138,6 +136,7 @@ private:
 
   std::vector<std::string> controllerJointOrder_;
   std::vector<std::string> policyJointOrder_;
+  /** @brief Maps active policy action index to controllerJointOrder_ index. */
   std::vector<int> actionToDofMap_;
 
   Eigen::VectorXd q_rl_;

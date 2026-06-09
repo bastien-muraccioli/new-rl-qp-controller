@@ -23,8 +23,21 @@ struct PolicyConfig
   double kpScale = 1.0;
   double kdScale = 1.0;
 
+  /**
+   * @brief Optional joint-group selector from policy.yaml/action/joints.
+   *
+   * Filled only when action.joints is written as a string, e.g. ``joints: legs``.
+   * The group is resolved by RLPolicyRuntime using the active convention.
+   */
+  std::string actionJointGroup;
+
+  /** @brief Explicit ordered action joints when action.joints is a YAML list. */
   std::vector<std::string> actionJoints;
+
+  /** @brief Per-joint action scale overrides. Missing entries use scale 1.0. */
   std::map<std::string, double> actionScale;
+
+  /** @brief Per-joint default target pose overrides. Missing entries use 0.0. */
   std::map<std::string, double> defaultPosition;
   std::map<std::string, double> kp;
   std::map<std::string, double> kd;

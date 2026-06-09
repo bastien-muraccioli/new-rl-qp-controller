@@ -92,15 +92,16 @@ void RLPolicyRuntime::runPolicyStepIfNeeded(NewRLQPController & ctl, double dt)
 
   currentAction_ = policy_->predict(currentObservation_);
 
-  if(currentAction_.size() != static_cast<int>(policyJointOrder_.size()))
+  if(currentAction_.size() != static_cast<int>(actionToDofMap_.size()))
   {
     mc_rtc::log::error_and_throw(
-      "[RLPolicyRuntime] Action size mismatch. ONNX produced {}, policy action.joints has {} joints.",
+      "[RLPolicyRuntime] Action size mismatch. ONNX produced {}, active action mapping expects {} joints.",
       currentAction_.size(),
-      policyJointOrder_.size());
+      actionToDofMap_.size());
   }
 
   currentActionScaled_.setZero();
+  q_rl_ = q_zero_;
 
   for(int actionIndex = 0; actionIndex < currentAction_.size(); ++actionIndex)
   {
@@ -167,9 +168,12 @@ void RLPolicyRuntime::loadPolicy(const std::string & policyName,
 
   mc_rtc::log::info("[RLPolicyRuntime] Loading policy '{}'", policy.name);
 
-  validatePolicyAgainstRobot(policy, ctl);
-
   configureControl(policy, ctl, torqueTask);
+
+  const std::string conventionName =
+    policy.rawObservations("training_convention", std::string("mjlab"));
+  activeConvention_ = ObservationConvention::fromConfig(controllerConfig_, conventionName);
+
   configureAction(policy, ctl);
   configureNetwork(policy);
   configureObservations(policy, ctl);
@@ -186,31 +190,6 @@ void RLPolicyRuntime::loadPolicy(const std::string & policyName,
     policy.name,
     currentObservation_.size(),
     currentAction_.size());
-}
-
-void RLPolicyRuntime::validatePolicyAgainstRobot(const PolicyConfig & policy,
-                                                 NewRLQPController & ctl) const
-{
-  for(size_t i = 0; i < policy.actionJoints.size(); ++i)
-  {
-    const std::string & joint = policy.actionJoints[i];
-
-    if(!ctl.robot().hasJoint(joint))
-    {
-      mc_rtc::log::error_and_throw(
-        "[RLPolicyRuntime:{}] action.joints contains unknown robot joint '{}'",
-        policy.name,
-        joint);
-    }
-
-    if(jointIndexInOrder(controllerJointOrder_, joint) < 0)
-    {
-      mc_rtc::log::error_and_throw(
-        "[RLPolicyRuntime:{}] action joint '{}' is not in controllerJointOrder",
-        policy.name,
-        joint);
-    }
-  }
 }
 
 void RLPolicyRuntime::configureControl(const PolicyConfig & policy,
@@ -273,22 +252,54 @@ void RLPolicyRuntime::configureControl(const PolicyConfig & policy,
 }
 
 void RLPolicyRuntime::configureAction(const PolicyConfig & policy,
-                                      NewRLQPController &)
+                                      NewRLQPController & ctl)
 {
-  policyJointOrder_ = policy.actionJoints;
+  if(!policy.actionJointGroup.empty())
+  {
+    mc_rtc::Configuration selector;
+    selector.add("joints", policy.actionJointGroup);
+    policyJointOrder_ = activeConvention_.resolveJoints(selector, controllerJointOrder_);
+  }
+  else
+  {
+    policyJointOrder_ = policy.actionJoints;
+  }
 
   actionToDofMap_.clear();
   actionToDofMap_.resize(policyJointOrder_.size(), -1);
 
   q_zero_.setZero();
   q_rl_.setZero();
-  actionScale_.setZero();
+  actionScale_.setOnes();
   currentActionScaled_.setZero();
+
+  const mc_rtc::Configuration action = policy.rawPolicy("action");
+
+  double scalarActionScale = 1.0;
+  if(action.has("scale"))
+  {
+    try { action("scale", scalarActionScale); } catch(...) {}
+  }
+
+  double scalarDefaultPosition = 0.0;
+  if(action.has("default_position"))
+  {
+    try { action("default_position", scalarDefaultPosition); } catch(...) {}
+  }
 
   for(size_t actionIndex = 0; actionIndex < policyJointOrder_.size(); ++actionIndex)
   {
     const std::string & joint = policyJointOrder_[actionIndex];
-    const int dofIndex = jointIndexInOrder(controllerJointOrder_, joint);
+
+    if(!ctl.robot().hasJoint(joint))
+    {
+      mc_rtc::log::error_and_throw(
+        "[RLPolicyRuntime:{}] action.joints contains unknown robot joint '{}'",
+        policy.name,
+        joint);
+    }
+
+    const int dofIndex = controllerJointIndex(joint);
 
     if(dofIndex < 0)
     {
@@ -300,8 +311,19 @@ void RLPolicyRuntime::configureAction(const PolicyConfig & policy,
 
     actionToDofMap_[actionIndex] = dofIndex;
 
-    actionScale_(dofIndex) = mapValueOrThrow(policy.actionScale, joint, "action.scale", policy.name);
-    q_zero_(dofIndex) = mapValueOrThrow(policy.defaultPosition, joint, "action.default_position", policy.name);
+    actionScale_(dofIndex) = scalarActionScale;
+    std::map<std::string, double>::const_iterator scaleIt = policy.actionScale.find(joint);
+    if(scaleIt != policy.actionScale.end())
+    {
+      actionScale_(dofIndex) = scaleIt->second;
+    }
+
+    q_zero_(dofIndex) = scalarDefaultPosition;
+    std::map<std::string, double>::const_iterator defaultIt = policy.defaultPosition.find(joint);
+    if(defaultIt != policy.defaultPosition.end())
+    {
+      q_zero_(dofIndex) = defaultIt->second;
+    }
   }
 
   q_rl_ = q_zero_;
@@ -332,12 +354,12 @@ void RLPolicyRuntime::configureNetwork(const PolicyConfig & policy)
 
   currentAction_ = Eigen::VectorXd::Zero(policy_->getActionSize());
 
-  if(static_cast<int>(policyJointOrder_.size()) != policy_->getActionSize())
+  if(static_cast<int>(actionToDofMap_.size()) != policy_->getActionSize())
   {
     mc_rtc::log::error_and_throw(
-      "[RLPolicyRuntime:{}] action.joints size ({}) does not match ONNX action size ({})",
+      "[RLPolicyRuntime:{}] Resolved action joint count ({}) does not match ONNX action size ({})",
       policy.name,
-      policyJointOrder_.size(),
+      actionToDofMap_.size(),
       policy_->getActionSize());
   }
 }
@@ -345,11 +367,6 @@ void RLPolicyRuntime::configureNetwork(const PolicyConfig & policy)
 void RLPolicyRuntime::configureObservations(const PolicyConfig & policy,
                                             NewRLQPController & ctl)
 {
-  const std::string conventionName =
-    policy.rawObservations("training_convention", std::string("mjlab"));
-
-  activeConvention_ = ObservationConvention::fromConfig(controllerConfig_, conventionName);
-
   observationManager_.load(policy.rawObservations, controllerConfig_, observationRegistry_);
   observationManager_.configure(makeObservationContext(ctl));
 
@@ -416,14 +433,14 @@ mc_rbdyn::Robot & RLPolicyRuntime::selectedObservationRobot(NewRLQPController & 
   return ctl.realRobot(robotName_);
 }
 
-int RLPolicyRuntime::jointIndexInOrder(const std::vector<std::string> & order,
-                                       const std::string & joint) const
+int RLPolicyRuntime::controllerJointIndex(const std::string & joint) const
 {
-  std::vector<std::string>::const_iterator it = std::find(order.begin(), order.end(), joint);
+  std::vector<std::string>::const_iterator it =
+    std::find(controllerJointOrder_.begin(), controllerJointOrder_.end(), joint);
 
-  if(it == order.end()) { return -1; }
+  if(it == controllerJointOrder_.end()) { return -1; }
 
-  return static_cast<int>(std::distance(order.begin(), it));
+  return static_cast<int>(std::distance(controllerJointOrder_.begin(), it));
 }
 
 double RLPolicyRuntime::mapValueOrThrow(const std::map<std::string, double> & values,
