@@ -8,6 +8,8 @@ conventions:
       base_lin_vel: base_lin_vel
       base_ang_vel: base_ang_vel
       projected_gravity: projected_gravity
+      base_orientation: base_orientation
+      phase: phase
       joint_pos_rel: joint_pos
       joint_vel_rel: joint_vel
       last_action: last_action
@@ -21,6 +23,14 @@ conventions:
         scale: 1.0
 
       projected_gravity:
+        scale: 1.0
+
+      base_orientation:
+        sensor: Accelerometer
+        scale: 1.0
+
+      phase:
+        offset: 0.0
         scale: 1.0
 
       joint_pos_rel:
@@ -49,6 +59,8 @@ conventions:
       base_lin_vel: base_lin_vel
       base_ang_vel: base_ang_vel
       projected_gravity: projected_gravity
+      base_orientation: base_orientation
+      phase: phase
       joint_pos: joint_pos
       joint_vel: joint_vel
       last_action: last_action
@@ -62,6 +74,14 @@ conventions:
         scale: 1.0
 
       projected_gravity:
+        scale: 1.0
+
+      base_orientation:
+        sensor: FloatingBase
+        scale: 1.0
+
+      phase:
+        offset: 0.0
         scale: 1.0
 
       joint_pos:

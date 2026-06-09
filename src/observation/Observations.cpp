@@ -3,8 +3,11 @@
 
 #include <RBDyn/MultiBodyConfig.h>
 #include <SpaceVecAlg/SpaceVecAlg>
+#include <mc_rbdyn/rpy_utils.h>
 
 #include <mc_rtc/logging.h>
+
+#include <cmath>
 
 namespace rlqp
 {
@@ -282,5 +285,73 @@ void CommandObservation::compute(const ObservationContext & context, Eigen::Ref<
     out(i) = scale_(i) * context.command(i);
   }
 }
+
+//============================================================================//
+// BaseOrientationObservation
+//============================================================================//
+
+BaseOrientationObservation::BaseOrientationObservation(const ObservationConfig & config,
+                                                       const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
+
+void BaseOrientationObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
+
+  sensorName_ = readParameter<std::string>(parameters, "sensor", std::string("Accelerometer"));
+
+  if(!context.observationRobot.hasBodySensor(sensorName_))
+  {
+    mc_rtc::log::error_and_throw(
+      "[Observation:{}] Body sensor '{}' does not exist on robot '{}'",
+      name(),
+      sensorName_,
+      context.observationRobot.name());
+  }
+
+  scale_ = readScaleVector(parameters, "scale", 3, 1.0);
+}
+
+void BaseOrientationObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  const auto & imu = context.observationRobot.bodySensor(sensorName_);
+
+  Eigen::Matrix3d baseRot = imu.orientation().toRotationMatrix().normalized();
+  const Eigen::Vector3d rpy = mc_rbdyn::rpyFromMat(baseRot);
+
+  out = rpy.cwiseProduct(scale_);
+}
+
+//============================================================================//
+// PhaseObservation
+//============================================================================//
+
+PhaseObservation::PhaseObservation(const ObservationConfig & config,
+                                   const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
+
+void PhaseObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
+
+  offset_ = readParameter<double>(parameters, "offset", 0.0);
+  scale_ = readScaleVector(parameters, "scale", 2, 1.0);
+}
+
+void PhaseObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  const double phase = context.phaseNormalized + offset_;
+  const double angle = 2.0 * M_PI * phase;
+
+  out(0) = scale_(0) * std::cos(angle);
+  out(1) = scale_(1) * std::sin(angle);
+}
+
 
 } // namespace rlqp

@@ -334,6 +334,8 @@ ObservationRegistry makeDefaultObservationRegistry()
   registry.registerType("projected_gravity", &makeObservation<ProjectedGravityObservation>);
   registry.registerType("base_ang_vel", &makeObservation<BaseAngVelObservation>);
   registry.registerType("base_lin_vel", &makeObservation<BaseLinVelObservation>);
+  registry.registerType("base_orientation", &makeObservation<BaseOrientationObservation>);
+  registry.registerType("phase", &makeObservation<PhaseObservation>);
   registry.registerType("last_action", &makeObservation<LastActionObservation>);
   registry.registerType("command", &makeObservation<CommandObservation>);
 

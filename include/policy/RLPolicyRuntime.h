@@ -64,6 +64,7 @@ public:
   int actionSize() const;
 
   double policyStepSize() const { return policyStepSize_; }
+  double phase() const { return phaseNormalized_; }
 
   bool useQP() const { return useQP_; }
   void setUseQP(bool useQP) { useQP_ = useQP; }
@@ -156,6 +157,9 @@ private:
   bool useQP_ = true;
   double policyStepSize_ = 0.01;
   double policyTimer_ = 0.0;
+  double phasePeriod_ = 1.0;
+  double phaseElapsedTime_ = 0.0;
+  double phaseNormalized_ = 0.0;
   double pdGainsRatio_ = 1.0;
 };
 

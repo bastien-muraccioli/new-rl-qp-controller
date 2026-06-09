@@ -56,6 +56,8 @@ void RLPolicyRuntime::configure(const mc_rtc::Configuration & controllerConfig,
 
 void RLPolicyRuntime::reset(NewRLQPController & ctl)
 {
+  phaseElapsedTime_ = 0.0;
+  phaseNormalized_ = 0.0;
   resetObservationHistory(ctl);
   policyTimer_ = policyStepSize_;
 }
@@ -69,6 +71,12 @@ void RLPolicyRuntime::runPolicyStepIfNeeded(NewRLQPController & ctl, double dt)
   }
 
   policyTimer_ += dt;
+  phaseElapsedTime_ += dt;
+
+  if(phasePeriod_ > 0.0)
+  {
+    phaseNormalized_ = std::fmod(phaseElapsedTime_ / phasePeriod_, 1.0);
+  }
 
   if(policyTimer_ < policyStepSize_) { return; }
 
@@ -166,6 +174,8 @@ void RLPolicyRuntime::loadPolicy(const std::string & policyName,
   configureNetwork(policy);
   configureObservations(policy, ctl);
 
+  phaseElapsedTime_ = 0.0;
+  phaseNormalized_ = 0.0;
   resetObservationHistory(ctl);
   validateObservationAgainstNetwork();
 
@@ -210,6 +220,20 @@ void RLPolicyRuntime::configureControl(const PolicyConfig & policy,
   useQP_ = policy.useQP;
   policyStepSize_ = policy.policyStepSize;
   pdGainsRatio_ = policy.kpScale;
+
+  phasePeriod_ = policy.rawObservations("phase_period", 1.0);
+  if(policy.rawPolicy.has("control"))
+  {
+    phasePeriod_ = policy.rawPolicy("control")("phase_period", phasePeriod_);
+  }
+
+  if(phasePeriod_ <= 0.0)
+  {
+    mc_rtc::log::error_and_throw(
+      "[RLPolicyRuntime:{}] phase_period must be positive, got {}",
+      policy.name,
+      phasePeriod_);
+  }
 
   if(policy.physicsStepSize - ctl.timeStep > 1e-6)
   {
@@ -378,6 +402,7 @@ ObservationContext RLPolicyRuntime::makeObservationContext(NewRLQPController & c
     q_zero_,
     currentAction_,
     command_,
+    phaseNormalized_,
     activeConvention_};
 }
 

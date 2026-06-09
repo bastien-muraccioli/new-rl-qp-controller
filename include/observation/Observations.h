@@ -121,4 +121,48 @@ private:
   Eigen::VectorXd scale_;
 };
 
+
+/**
+ * @brief Base roll/pitch/yaw observation computed from a body sensor orientation.
+ *
+ * The default sensor name is "Accelerometer". It can be overridden with:
+ *
+ * parameters:
+ *   sensor: ...
+ */
+class BaseOrientationObservation : public Observation
+{
+public:
+  BaseOrientationObservation(const ObservationConfig & config, const ObservationConvention & convention);
+
+  void configure(const ObservationContext & context) override;
+  int size() const override { return 3; }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+
+private:
+  std::string sensorName_ = "Accelerometer";
+  Eigen::VectorXd scale_;
+};
+
+/**
+ * @brief Phase observation represented as [cos(phase), sin(phase)].
+ *
+ * The runtime owns the normalized phase in [0, 1). This observation only
+ * converts it to the trigonometric representation expected by many locomotion
+ * policies.
+ */
+class PhaseObservation : public Observation
+{
+public:
+  PhaseObservation(const ObservationConfig & config, const ObservationConvention & convention);
+
+  void configure(const ObservationContext & context) override;
+  int size() const override { return 2; }
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+
+private:
+  double offset_ = 0.0;
+  Eigen::VectorXd scale_;
+};
+
 } // namespace rlqp

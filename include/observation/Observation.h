@@ -116,6 +116,14 @@ struct ObservationContext
   /** @brief High-level command vector, e.g. vx, vy, yaw_rate. */
   const Eigen::Vector3d & command;
 
+  /**
+   * @brief Normalized control phase in [0, 1).
+   *
+   * PhaseObservation converts this scalar into [cos(2*pi*phase), sin(2*pi*phase)].
+   * The phase value is updated by RLPolicyRuntime.
+   */
+  double phaseNormalized = 0.0;
+
   /** @brief Active training-environment convention. */
   ObservationConvention convention;
 };
