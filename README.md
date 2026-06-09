@@ -20,6 +20,12 @@ It comes with:
 - clang-format files
 - automated GitHub Actions builds on three major platforms
 
+Requirements
+--
+- [mc_rtc](https://github.com/bastien-muraccioli/mc_rtc)
+- [tvm](https://github.com/bastien-muraccioli/tvm)
+- [mc_external_forces_observer](https://github.com/isri-aist/mc_external_forces_observer)
+
 Quick start
 --
 
@@ -40,9 +46,19 @@ git mv etc/NewRLQPController.in.yaml etc/MyController.in.yaml
 
 3. Run using your [mc_rtc] interface of choice, and setting `Enabled` to `MyController`
 
----
+Installation
+--
 
-## Tutorial: Deploying your own RL policy
+The recommended way is via the
+[mc_rtc superbuild](https://github.com/mc-rtc/mc-rtc-superbuild).
+For a standalone build, ensure `mc_rtc` is installed, then:
+
+```bash
+cmake -B build && cmake --build build && cmake --install build
+```
+
+Tutorial: Deploying your own RL policy
+--
 
 ### Step 1 — Export your policy to ONNX
 

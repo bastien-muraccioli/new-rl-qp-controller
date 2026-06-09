@@ -31,13 +31,19 @@ ObserverPipelines:
   observers:
     # Add an encoder observer to read joint velocities (Required for closed loop control)
     - type: Encoder
-      config:
-          velocity: encoderVelocities
+      velocity: encoderVelocities
+      
     # For humanoid robots, add an estimator to compute the floating base state (position, velocity and orientation of the robot in the world)
     # BodySensor observer can be used in simulation, but on the real-robot, tilt observer must be used instead.
     # - type: BodySensor
     #   update: true
     #   bodySensor: FloatingBase
+
+    - type: ExternalForcesObserver
+      estimation_method: MomentumObserver   # or ForceSensorBased
+      # MomentumObserver-only keys:
+      residual_gain: 10.0              # observer gain K; higher = faster response, more noise
+      torque_source_type: CommandedTorque  # JointTorqueMeasurement preferred when available
 
 # Implement some additional text states
 states: {}
