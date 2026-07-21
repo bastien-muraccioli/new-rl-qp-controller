@@ -1,6 +1,6 @@
 #include "policy/RLPolicyRuntime.h"
 
-#include "NewRLQPController.h"
+#include "H1RLQPController.h"
 
 #include <mc_rtc/logging.h>
 
@@ -17,7 +17,7 @@ RLPolicyRuntime::RLPolicyRuntime()
 }
 
 void RLPolicyRuntime::configure(const mc_rtc::Configuration & controllerConfig,
-                                NewRLQPController & ctl,
+                                H1RLQPController & ctl,
                                 const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask)
 {
   controllerConfig_ = controllerConfig;
@@ -51,7 +51,7 @@ void RLPolicyRuntime::configure(const mc_rtc::Configuration & controllerConfig,
   loadPolicy(policyManager_.currentName(), ctl, torqueTask);
 }
 
-void RLPolicyRuntime::reset(NewRLQPController & ctl)
+void RLPolicyRuntime::reset(H1RLQPController & ctl)
 {
   phaseElapsedTime_ = 0.0;
   phaseNormalized_ = 0.0;
@@ -60,7 +60,7 @@ void RLPolicyRuntime::reset(NewRLQPController & ctl)
   policyUpdateCount_ = 0;
 }
 
-void RLPolicyRuntime::runPolicyStepIfNeeded(NewRLQPController & ctl, double dt)
+void RLPolicyRuntime::runPolicyStepIfNeeded(H1RLQPController & ctl, double dt)
 {
   if(!policyLoaded())
   {
@@ -109,14 +109,14 @@ void RLPolicyRuntime::runPolicyStepIfNeeded(NewRLQPController & ctl, double dt)
   policyTimer_ = std::fmod(policyTimer_, policyStepSize_);
 }
 
-void RLPolicyRuntime::reloadCurrentPolicy(NewRLQPController & ctl,
+void RLPolicyRuntime::reloadCurrentPolicy(H1RLQPController & ctl,
                                           const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask)
 {
   loadPolicy(policyManager_.currentName(), ctl, torqueTask);
 }
 
 void RLPolicyRuntime::loadPolicyByName(const std::string & policyName,
-                                       NewRLQPController & ctl,
+                                       H1RLQPController & ctl,
                                        const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask)
 {
   if(policyName == policyManager_.currentName()) { return; }
@@ -124,7 +124,7 @@ void RLPolicyRuntime::loadPolicyByName(const std::string & policyName,
   loadPolicy(policyName, ctl, torqueTask);
 }
 
-void RLPolicyRuntime::loadNextPolicy(NewRLQPController & ctl,
+void RLPolicyRuntime::loadNextPolicy(H1RLQPController & ctl,
                                      const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask)
 {
   policyManager_.selectNext();
@@ -158,7 +158,7 @@ void RLPolicyRuntime::setPDGainsRatio(double ratio,
 }
 
 void RLPolicyRuntime::loadPolicy(const std::string & policyName,
-                                 NewRLQPController & ctl,
+                                 H1RLQPController & ctl,
                                  const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask)
 {
   policyManager_.select(policyName);
@@ -191,7 +191,7 @@ void RLPolicyRuntime::loadPolicy(const std::string & policyName,
 }
 
 void RLPolicyRuntime::configureControl(const PolicyConfig & policy,
-                                       NewRLQPController & ctl,
+                                       H1RLQPController & ctl,
                                        const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask)
 {
   useQP_ = policy.useQP;
@@ -237,7 +237,7 @@ void RLPolicyRuntime::configureControl(const PolicyConfig & policy,
 }
 
 void RLPolicyRuntime::configureAction(const PolicyConfig & policy,
-                                      NewRLQPController & ctl)
+                                      H1RLQPController & ctl)
 {
   // Resolve action.joints to controller indices.
   // This is the ONNX action vector layout/size. Do not use controlled_joints here,
@@ -349,14 +349,14 @@ void RLPolicyRuntime::configureNetwork(const PolicyConfig & policy)
 }
 
 void RLPolicyRuntime::configureObservations(const PolicyConfig & policy,
-                                            NewRLQPController & ctl)
+                                            H1RLQPController & ctl)
 {
   observationManager_.load(policy.observationsConfiguration, controllerConfig_, observationRegistry_);
   observationManager_.configure(makeObservationContext(ctl));
   currentObservation_ = Eigen::VectorXd::Zero(policy_->getObservationSize());
 }
 
-void RLPolicyRuntime::resetObservationHistory(NewRLQPController & ctl)
+void RLPolicyRuntime::resetObservationHistory(H1RLQPController & ctl)
 {
   if(!policyLoaded())
   {
@@ -370,7 +370,7 @@ void RLPolicyRuntime::resetObservationHistory(NewRLQPController & ctl)
   currentObservation_ = observationManager_.compute(context);
 }
 
-Eigen::VectorXd RLPolicyRuntime::computeObservation(NewRLQPController & ctl)
+Eigen::VectorXd RLPolicyRuntime::computeObservation(H1RLQPController & ctl)
 {
   ObservationContext context = makeObservationContext(ctl);
   return observationManager_.compute(context);
@@ -386,7 +386,7 @@ void RLPolicyRuntime::validateObservationAgainstNetwork() const
       currentObservation_.size(), policy_->getObservationSize());
 }
 
-ObservationContext RLPolicyRuntime::makeObservationContext(NewRLQPController & ctl)
+ObservationContext RLPolicyRuntime::makeObservationContext(H1RLQPController & ctl)
 {
   return ObservationContext{
     selectedObservationRobot(ctl),
@@ -400,7 +400,7 @@ ObservationContext RLPolicyRuntime::makeObservationContext(NewRLQPController & c
     activeConvention_};
 }
 
-mc_rbdyn::Robot & RLPolicyRuntime::selectedObservationRobot(NewRLQPController & ctl)
+mc_rbdyn::Robot & RLPolicyRuntime::selectedObservationRobot(H1RLQPController & ctl)
 {
   if(observationSource_ == "robot")
     return ctl.robot();
@@ -408,11 +408,11 @@ mc_rbdyn::Robot & RLPolicyRuntime::selectedObservationRobot(NewRLQPController & 
 }
 
 
-void RLPolicyRuntime::addLogObs(NewRLQPController & ctl)
+void RLPolicyRuntime::addLogObs(H1RLQPController & ctl)
 {
   for(const auto & entry : observationManager_.entries())
   {
-    const std::string baseName = "NewRLQPController_Observations_" + entry.observation->name();
+    const std::string baseName = "H1RLQPController_Observations_" + entry.observation->name();
     const size_t size = entry.historyBuffer.size();
     if(size == 1)
     {

@@ -8,7 +8,7 @@
  *
  * utils provides three FSM hooks (start / run / teardown) and the observation
  * assembly function getCurrentObservation(). One utils instance lives inside
- * NewRLQPController and is called from each FSM RL state.
+ * H1RLQPController and is called from each FSM RL state.
  *
  * ## Usage in an FSM state
  *
@@ -16,7 +16,7 @@
  * // In MyState.cpp
  * bool MyState::run(mc_control::fsm::Controller & ctl)
  * {
- *   auto & c = static_cast<NewRLQPController&>(ctl);
+ *   auto & c = static_cast<H1RLQPController&>(ctl);
  *   c.rlStateRunner.run(ctl);
  *   // ... handle transitions ...
  * }

@@ -1,5 +1,5 @@
-#include "NewRLQPController.h"
+#include "H1RLQPController.h"
 
 #include <mc_control/mc_controller.h>
 
-CONTROLLER_CONSTRUCTOR("NewRLQPController", NewRLQPController)
+CONTROLLER_CONSTRUCTOR("H1RLQPController", H1RLQPController)

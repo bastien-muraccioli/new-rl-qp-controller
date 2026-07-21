@@ -2,7 +2,7 @@
   "name": "mc-rtc-new-fsm-controller",
   "version-string": "1.0.0",
   "homepage": "",
-  "description": "NewRLQPController for mc_rtc",
+  "description": "H1RLQPController for mc_rtc",
   "dependencies": [
     "mc-rtc"
   ]

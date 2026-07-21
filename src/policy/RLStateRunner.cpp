@@ -1,13 +1,13 @@
 #include "policy/RLStateRunner.h"
 
-#include "NewRLQPController.h"
+#include "H1RLQPController.h"
 
 #include <mc_rtc/gui.h>
 #include <mc_rtc/logging.h>
 
 void RLStateRunner::start(mc_control::fsm::Controller & ctl_, const std::string & stateName)
 {
-  NewRLQPController & ctl = static_cast<NewRLQPController &>(ctl_);
+  H1RLQPController & ctl = static_cast<H1RLQPController &>(ctl_);
 
   stateName_ = stateName;
 
@@ -20,7 +20,7 @@ void RLStateRunner::start(mc_control::fsm::Controller & ctl_, const std::string 
   }
 
   ctl.gui()->addElement(
-    {"NewRLQPController", stateName_},
+    {"H1RLQPController", stateName_},
     mc_rtc::gui::Label("Policy loaded", [&ctl]() { return ctl.rlRuntime().policyLoaded() ? "Yes" : "No"; }),
     mc_rtc::gui::Label("Observation size", [&ctl]() { return std::to_string(ctl.rlRuntime().observationSize()); }),
     mc_rtc::gui::Label("Action size", [&ctl]() { return std::to_string(ctl.rlRuntime().actionSize()); }),
@@ -34,7 +34,7 @@ void RLStateRunner::start(mc_control::fsm::Controller & ctl_, const std::string 
 
 void RLStateRunner::run(mc_control::fsm::Controller & ctl_)
 {
-  NewRLQPController & ctl = static_cast<NewRLQPController &>(ctl_);
+  H1RLQPController & ctl = static_cast<H1RLQPController &>(ctl_);
 
   try
   {

@@ -1,4 +1,4 @@
-#include "NewRLQPController.h"
+#include "H1RLQPController.h"
 
 #include <RBDyn/MultiBodyConfig.h>
 
@@ -7,7 +7,7 @@
 
 #include <cmath>
 
-NewRLQPController::NewRLQPController(mc_rbdyn::RobotModulePtr rm,
+H1RLQPController::H1RLQPController(mc_rbdyn::RobotModulePtr rm,
                                      double dt,
                                      const mc_rtc::Configuration & config)
 : mc_control::fsm::Controller(rm, dt, config, Backend::TVM)
@@ -34,10 +34,10 @@ NewRLQPController::NewRLQPController(mc_rbdyn::RobotModulePtr rm,
   addGui();
   addLog();
 
-  mc_rtc::log::success("[NewRLQPController] init done");
+  mc_rtc::log::success("[H1RLQPController] init done");
 }
 
-bool NewRLQPController::run()
+bool H1RLQPController::run()
 {
   if(printLimits_) computeLimits();
   bool run = mc_control::fsm::Controller::run(
@@ -49,24 +49,24 @@ bool NewRLQPController::run()
   return run; // Return false if QP fails
 }
 
-void NewRLQPController::reset(const mc_control::ControllerResetData & reset_data)
+void H1RLQPController::reset(const mc_control::ControllerResetData & reset_data)
 {
   mc_control::fsm::Controller::reset(reset_data);
   rlRuntime_.reset(*this);
 }
 
-void NewRLQPController::activateQPControl(bool activate)
+void H1RLQPController::activateQPControl(bool activate)
 {
   rlRuntime_.setUseQP(activate);
 }
 
-rlqp::RLPolicyRuntime & NewRLQPController::rlRuntime() { return rlRuntime_; }
+rlqp::RLPolicyRuntime & H1RLQPController::rlRuntime() { return rlRuntime_; }
 
-const rlqp::RLPolicyRuntime & NewRLQPController::rlRuntime() const { return rlRuntime_; }
+const rlqp::RLPolicyRuntime & H1RLQPController::rlRuntime() const { return rlRuntime_; }
 
-void NewRLQPController::initializeRobotBasics()
+void H1RLQPController::initializeRobotBasics()
 {
-  mc_rtc::log::info("[NewRLQPController] Using torque control mode");
+  mc_rtc::log::info("[H1RLQPController] Using torque control mode");
 
   if(!datastore().has("ControlMode"))
   {
@@ -86,7 +86,7 @@ void NewRLQPController::initializeRobotBasics()
   }
 }
 
-bool NewRLQPController::byPassQPControl()
+bool H1RLQPController::byPassQPControl()
 {
   if(rlRuntime_.useQP()) return false; // QP is not bypassed, do nothing
 
@@ -111,41 +111,41 @@ bool NewRLQPController::byPassQPControl()
   return true;
 }
 
-void NewRLQPController::addLog()
+void H1RLQPController::addLog()
 {
   // Robot State variables
-  logger().addLogEntry("NewRLQPController_kp_base", [this]() { return rlRuntime_.kpBase(); });
-  logger().addLogEntry("NewRLQPController_kd_base", [this]() { return rlRuntime_.kdBase(); });
-  logger().addLogEntry("NewRLQPController_kp_current", [this]() { return rlRuntime_.kp(); });
-  logger().addLogEntry("NewRLQPController_kd_current", [this]() { return rlRuntime_.kd(); });
-  logger().addLogEntry("NewRLQPController_pd_gains_ratio", [this]() { return rlRuntime_.pdGainsRatio(); });
+  logger().addLogEntry("H1RLQPController_kp_base", [this]() { return rlRuntime_.kpBase(); });
+  logger().addLogEntry("H1RLQPController_kd_base", [this]() { return rlRuntime_.kdBase(); });
+  logger().addLogEntry("H1RLQPController_kp_current", [this]() { return rlRuntime_.kp(); });
+  logger().addLogEntry("H1RLQPController_kd_current", [this]() { return rlRuntime_.kd(); });
+  logger().addLogEntry("H1RLQPController_pd_gains_ratio", [this]() { return rlRuntime_.pdGainsRatio(); });
 
   // RL variables
-  logger().addLogEntry("NewRLQPController_RL_q", [this]() { return rlRuntime_.q_rl(); });
-  logger().addLogEntry("NewRLQPController_RL_qZero", [this]() { return rlRuntime_.q_zero(); });
-  logger().addLogEntry("NewRLQPController_RL_currentObservation", [this]() { return rlRuntime_.currentObservation(); });
-  logger().addLogEntry("NewRLQPController_RL_currentAction", [this]() { return rlRuntime_.currentAction(); });
-  logger().addLogEntry("NewRLQPController_RL_currentActionScaled", [this]() { return rlRuntime_.currentActionScaled(); });
-  logger().addLogEntry("NewRLQPController_RL_actionScale", [this]() { return rlRuntime_.actionScale(); });
-  logger().addLogEntry("NewRLQPController_RL_command", [this]() { return rlRuntime_.command(); });
+  logger().addLogEntry("H1RLQPController_RL_q", [this]() { return rlRuntime_.q_rl(); });
+  logger().addLogEntry("H1RLQPController_RL_qZero", [this]() { return rlRuntime_.q_zero(); });
+  logger().addLogEntry("H1RLQPController_RL_currentObservation", [this]() { return rlRuntime_.currentObservation(); });
+  logger().addLogEntry("H1RLQPController_RL_currentAction", [this]() { return rlRuntime_.currentAction(); });
+  logger().addLogEntry("H1RLQPController_RL_currentActionScaled", [this]() { return rlRuntime_.currentActionScaled(); });
+  logger().addLogEntry("H1RLQPController_RL_actionScale", [this]() { return rlRuntime_.actionScale(); });
+  logger().addLogEntry("H1RLQPController_RL_command", [this]() { return rlRuntime_.command(); });
 
   // Controller state variables
-  logger().addLogEntry("NewRLQPController_useQP", [this]() { return rlRuntime_.useQP(); });
+  logger().addLogEntry("H1RLQPController_useQP", [this]() { return rlRuntime_.useQP(); });
 
   // Log current policy (name and convention)
-  logger().addLogEntry("NewRLQPController_currentPolicy", [this]() { return rlRuntime_.currentPolicyName(); });
-  logger().addLogEntry("NewRLQPController_observationConvention", [this]() { return rlRuntime_.conventionName(); });
-  logger().addLogEntry("NewRLQPController_RL_phase", [this]() { return rlRuntime_.phase(); });
-  logger().addLogEntry("NewRLQPController_RL_policy_period_s", [this]() { return rlRuntime_.policyStepSize(); });
-  logger().addLogEntry("NewRLQPController_RL_update_count", [this]() { return rlRuntime_.policyUpdateCount(); });
+  logger().addLogEntry("H1RLQPController_currentPolicy", [this]() { return rlRuntime_.currentPolicyName(); });
+  logger().addLogEntry("H1RLQPController_observationConvention", [this]() { return rlRuntime_.conventionName(); });
+  logger().addLogEntry("H1RLQPController_RL_phase", [this]() { return rlRuntime_.phase(); });
+  logger().addLogEntry("H1RLQPController_RL_policy_period_s", [this]() { return rlRuntime_.policyStepSize(); });
+  logger().addLogEntry("H1RLQPController_RL_update_count", [this]() { return rlRuntime_.policyUpdateCount(); });
 
   rlRuntime_.addLogObs(*this);
 }
 
-void NewRLQPController::addGui()
+void H1RLQPController::addGui()
 {
   gui()->addElement(
-    {"NewRLQPController", "Policy"},
+    {"H1RLQPController", "Policy"},
     mc_rtc::gui::Label("Current policy", [this]() { return rlRuntime_.currentPolicyName(); }),
     mc_rtc::gui::Label("Current policy folder", [this]() { return rlRuntime_.currentPolicyFolder(); }),
     mc_rtc::gui::Label("Observation convention", [this]() { return rlRuntime_.conventionName(); }),
@@ -166,7 +166,7 @@ void NewRLQPController::addGui()
     }));
 
   gui()->addElement(
-    {"NewRLQPController", "PD Gains"},
+    {"H1RLQPController", "PD Gains"},
     mc_rtc::gui::NumberSlider(
       "PD Gains Ratio",
       [this]() { return rlRuntime_.pdGainsRatio(); },
@@ -177,7 +177,7 @@ void NewRLQPController::addGui()
     mc_rtc::gui::Label("Current kd", [this]() { return rlRuntime_.kd(); }));
 
   gui()->addElement(
-    {"NewRLQPController", "Control"},
+    {"H1RLQPController", "Control"},
     mc_rtc::gui::Button("Toggle QP Control", [this]() {
       rlRuntime_.setUseQP(!rlRuntime_.useQP());
     }),
@@ -192,7 +192,7 @@ void NewRLQPController::addGui()
     }));
 
   gui()->addElement(
-    {"NewRLQPController", "Runtime"},
+    {"H1RLQPController", "Runtime"},
     mc_rtc::gui::Label("Controller period [s]", [this]() { return timeStep; }),
     mc_rtc::gui::Label("Controller rate [Hz]", [this]() { return 1.0 / timeStep; }),
     mc_rtc::gui::Label("Policy period [s]", [this]() { return rlRuntime_.policyStepSize(); }),
@@ -201,7 +201,7 @@ void NewRLQPController::addGui()
     mc_rtc::gui::Label("Phase", [this]() { return rlRuntime_.phase(); }));
 
   gui()->addElement(
-    {"NewRLQPController", "Command"},
+    {"H1RLQPController", "Command"},
     mc_rtc::gui::NumberInput(
       "vx",
       [this]() { return rlRuntime_.command()(0); },
@@ -216,7 +216,7 @@ void NewRLQPController::addGui()
       [this](double v) { rlRuntime_.command()(2) = v; }));
 }
 
-void NewRLQPController::computeLimits()
+void H1RLQPController::computeLimits()
 {
   const double epsilon = 1e-5;
 
@@ -255,7 +255,7 @@ void NewRLQPController::computeLimits()
     if(currentPos[idx][0] > posLimitUp + epsilon)
     {
       mc_rtc::log::warning(
-        "[NewRLQPController] Joint {} position upper limit breached: currentPos = {}, limit = {}",
+        "[H1RLQPController] Joint {} position upper limit breached: currentPos = {}, limit = {}",
         joint,
         currentPos[idx][0],
         posLimitUp);
@@ -264,7 +264,7 @@ void NewRLQPController::computeLimits()
     if(currentPos[idx][0] < posLimitLow - epsilon)
     {
       mc_rtc::log::warning(
-        "[NewRLQPController] Joint {} position lower limit breached: currentPos = {}, limit = {}",
+        "[H1RLQPController] Joint {} position lower limit breached: currentPos = {}, limit = {}",
         joint,
         currentPos[idx][0],
         posLimitLow);
@@ -273,7 +273,7 @@ void NewRLQPController::computeLimits()
     if(currentVel[idx][0] > velLimitUp + epsilon)
     {
       mc_rtc::log::warning(
-        "[NewRLQPController] Joint {} velocity upper limit breached: currentVel = {}, limit = {}",
+        "[H1RLQPController] Joint {} velocity upper limit breached: currentVel = {}, limit = {}",
         joint,
         currentVel[idx][0],
         velLimitUp);
@@ -282,7 +282,7 @@ void NewRLQPController::computeLimits()
     if(currentVel[idx][0] < velLimitLow - epsilon)
     {
       mc_rtc::log::warning(
-        "[NewRLQPController] Joint {} velocity lower limit breached: currentVel = {}, limit = {}",
+        "[H1RLQPController] Joint {} velocity lower limit breached: currentVel = {}, limit = {}",
         joint,
         currentVel[idx][0],
         velLimitLow);
@@ -291,7 +291,7 @@ void NewRLQPController::computeLimits()
     if(currentTau[idx][0] > tauLimitUp + epsilon)
     {
       mc_rtc::log::warning(
-        "[NewRLQPController] Joint {} torque upper limit breached: currentTau = {}, limit = {}",
+        "[H1RLQPController] Joint {} torque upper limit breached: currentTau = {}, limit = {}",
         joint,
         currentTau[idx][0],
         tauLimitUp);
@@ -300,7 +300,7 @@ void NewRLQPController::computeLimits()
     if(currentTau[idx][0] < tauLimitLow - epsilon)
     {
       mc_rtc::log::warning(
-        "[NewRLQPController] Joint {} torque lower limit breached: currentTau = {}, limit = {}",
+        "[H1RLQPController] Joint {} torque lower limit breached: currentTau = {}, limit = {}",
         joint,
         currentTau[idx][0],
         tauLimitLow);
@@ -308,7 +308,7 @@ void NewRLQPController::computeLimits()
   }
 }
 
-std::pair<sva::PTransformd, Eigen::Vector3d> NewRLQPController::createContactAnchor(const mc_rbdyn::Robot & anchorRobot)
+std::pair<sva::PTransformd, Eigen::Vector3d> H1RLQPController::createContactAnchor(const mc_rbdyn::Robot & anchorRobot)
 {
   sva::PTransformd X_foot_r = anchorRobot.bodyPosW("right_ankle_link");
   sva::PTransformd X_foot_l = anchorRobot.bodyPosW("left_ankle_link");

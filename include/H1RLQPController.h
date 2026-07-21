@@ -45,7 +45,7 @@
  * ## Configuration
  *
  * All parameters are loaded from YAML config files :
- * etc/NewRLQPController.in.yaml :
+ * etc/H1RLQPController.in.yaml :
  *  - policies root directory     Path where policy directories will be search for
  *  - default policy              Name of the first policy to run
  * {policy_root}/{policy_name} :
@@ -73,9 +73,9 @@
  * @see RLPolicyInterface.h for ONNX inference wrapper.
  */
 
-struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Controller
+struct H1RLQPController_DLLAPI H1RLQPController : public mc_control::fsm::Controller
 {
-  NewRLQPController(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config);
+  H1RLQPController(mc_rbdyn::RobotModulePtr rm, double dt, const mc_rtc::Configuration & config);
 
   bool run() override;
   void reset(const mc_control::ControllerResetData & reset_data) override;
