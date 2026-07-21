@@ -135,6 +135,11 @@ void NewRLQPController::addLog()
   // Log current policy (name and convention)
   logger().addLogEntry("NewRLQPController_currentPolicy", [this]() { return rlRuntime_.currentPolicyName(); });
   logger().addLogEntry("NewRLQPController_observationConvention", [this]() { return rlRuntime_.conventionName(); });
+  logger().addLogEntry("NewRLQPController_RL_phase", [this]() { return rlRuntime_.phase(); });
+  logger().addLogEntry("NewRLQPController_RL_policy_period_s", [this]() { return rlRuntime_.policyStepSize(); });
+  logger().addLogEntry("NewRLQPController_RL_update_count", [this]() { return rlRuntime_.policyUpdateCount(); });
+
+  rlRuntime_.addLogObs(*this);
 }
 
 void NewRLQPController::addGui()
@@ -144,6 +149,11 @@ void NewRLQPController::addGui()
     mc_rtc::gui::Label("Current policy", [this]() { return rlRuntime_.currentPolicyName(); }),
     mc_rtc::gui::Label("Current policy folder", [this]() { return rlRuntime_.currentPolicyFolder(); }),
     mc_rtc::gui::Label("Observation convention", [this]() { return rlRuntime_.conventionName(); }),
+    mc_rtc::gui::Label("Observation source", [this]() { return rlRuntime_.observationSource(); }),
+    mc_rtc::gui::Label("Base body", [this]() { return rlRuntime_.baseBody(); }),
+    mc_rtc::gui::Label("Observation size", [this]() { return rlRuntime_.observationSize(); }),
+    mc_rtc::gui::Label("Action size", [this]() { return rlRuntime_.actionSize(); }),
+    mc_rtc::gui::Label("Controlled action size", [this]() { return rlRuntime_.controlledActionSize(); }),
     mc_rtc::gui::ComboInput(
       "Select policy",
       rlRuntime_.availablePolicyNames(),
@@ -180,6 +190,15 @@ void NewRLQPController::addGui()
     mc_rtc::gui::Label("Print joint limits", [this]() {
       return printLimits_ ? "Enabled" : "Disabled";
     }));
+
+  gui()->addElement(
+    {"NewRLQPController", "Runtime"},
+    mc_rtc::gui::Label("Controller period [s]", [this]() { return timeStep; }),
+    mc_rtc::gui::Label("Controller rate [Hz]", [this]() { return 1.0 / timeStep; }),
+    mc_rtc::gui::Label("Policy period [s]", [this]() { return rlRuntime_.policyStepSize(); }),
+    mc_rtc::gui::Label("Policy rate [Hz]", [this]() { return rlRuntime_.policyRate(); }),
+    mc_rtc::gui::Label("Policy updates", [this]() { return rlRuntime_.policyUpdateCount(); }),
+    mc_rtc::gui::Label("Phase", [this]() { return rlRuntime_.phase(); }));
 
   gui()->addElement(
     {"NewRLQPController", "Command"},

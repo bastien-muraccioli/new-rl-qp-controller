@@ -26,11 +26,13 @@ JointPosObservation::JointPosObservation(const ObservationConfig & config,
 void JointPosObservation::configure(const ObservationContext & context)
 {
   mc_rtc::Configuration parameters =
-    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
+      context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
 
-  const std::vector<int> controllerIndices = context.convention.resolveJointControllerIndices(parameters, context.observationRobot.refJointOrder(), context.policyJointControllerIndices);
+  const std::vector<int> controllerIndices = context.convention.resolveJointControllerIndices(
+      parameters, context.controllerJointOrder, context.policyJointControllerIndices);
 
   const int n = static_cast<int>(controllerIndices.size());
+  controllerIndices_ = controllerIndices;
   mbcIndices_.resize(static_cast<size_t>(n));
   defaultPose_ = Eigen::VectorXd::Zero(n);
 
@@ -48,17 +50,35 @@ void JointPosObservation::configure(const ObservationContext & context)
 
 void JointPosObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
 {
-  auto q_map = context.observationRobot.encoderValues();
-  Eigen::VectorXd currentPos = Eigen::VectorXd::Zero(context.observationRobot.mb().nrDof()-6);
-  if (q_map.size() != 0)
-    currentPos = Eigen::VectorXd::Map(q_map.data(), q_map.size());
+  const auto & currentPos = context.observationRobot.encoderValues();
+  const bool useEncoders = currentPos.size() == context.controllerJointOrder.size();
 
-  for(size_t i = 0; i < mbcIndices_.size(); ++i)
+  if(!currentPos.empty() && !useEncoders)
   {
-    double value = currentPos[static_cast<size_t>(mbcIndices_[i]-1)];
+    mc_rtc::log::error_and_throw("[Observation:{}] encoderValues has size {}, expected {} or 0", name(),
+                                 currentPos.size(), context.controllerJointOrder.size());
+  }
 
-    if(relativeToDefaultPose_)
-      value -= defaultPose_(static_cast<int>(i));
+  for(size_t i = 0; i < controllerIndices_.size(); ++i)
+  {
+    double value = 0.0;
+    if(useEncoders)
+    {
+      value = currentPos[static_cast<size_t>(controllerIndices_[i])];
+    }
+    else
+    {
+      const auto & q = context.observationRobot.mbc().q[static_cast<size_t>(mbcIndices_[i])];
+      if(q.size() != 1)
+      {
+        mc_rtc::log::error_and_throw("[Observation:{}] Joint '{}' has {} position DoFs, expected 1", name(),
+                                     context.controllerJointOrder[static_cast<size_t>(controllerIndices_[i])],
+                                     q.size());
+      }
+      value = q[0];
+    }
+
+    if(relativeToDefaultPose_) value -= defaultPose_(static_cast<int>(i));
 
     out(static_cast<int>(i)) = scale_(static_cast<int>(i)) * value;
   }
@@ -77,11 +97,13 @@ JointVelObservation::JointVelObservation(const ObservationConfig & config,
 void JointVelObservation::configure(const ObservationContext & context)
 {
   mc_rtc::Configuration parameters =
-    context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
+      context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
 
-  const std::vector<int> controllerIndices = context.convention.resolveJointControllerIndices(parameters, context.observationRobot.refJointOrder(), context.policyJointControllerIndices);
+  const std::vector<int> controllerIndices = context.convention.resolveJointControllerIndices(
+      parameters, context.controllerJointOrder, context.policyJointControllerIndices);
 
   const int n = static_cast<int>(controllerIndices.size());
+  controllerIndices_ = controllerIndices;
   mbcIndices_.resize(static_cast<size_t>(n));
   defaultVelocity_ = Eigen::VectorXd::Zero(n);
 
@@ -98,17 +120,35 @@ void JointVelObservation::configure(const ObservationContext & context)
 
 void JointVelObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
 {
-  auto vel_map = context.observationRobot.encoderVelocities();
-  Eigen::VectorXd currentVel = Eigen::VectorXd::Zero(context.observationRobot.mb().nrDof()-6);
-  if (vel_map.size() != 0)
-    currentVel = Eigen::VectorXd::Map(vel_map.data(), vel_map.size());
+  const auto & currentVel = context.observationRobot.encoderVelocities();
+  const bool useEncoders = currentVel.size() == context.controllerJointOrder.size();
 
-  for(size_t i = 0; i < mbcIndices_.size(); ++i)
+  if(!currentVel.empty() && !useEncoders)
   {
-    double value = currentVel[static_cast<size_t>(mbcIndices_[i]-1)];
+    mc_rtc::log::error_and_throw("[Observation:{}] encoderVelocities has size {}, expected {} or 0", name(),
+                                 currentVel.size(), context.controllerJointOrder.size());
+  }
 
-    if(relativeToDefaultVelocity_)
-      value -= defaultVelocity_(static_cast<int>(i));
+  for(size_t i = 0; i < controllerIndices_.size(); ++i)
+  {
+    double value = 0.0;
+    if(useEncoders)
+    {
+      value = currentVel[static_cast<size_t>(controllerIndices_[i])];
+    }
+    else
+    {
+      const auto & alpha = context.observationRobot.mbc().alpha[static_cast<size_t>(mbcIndices_[i])];
+      if(alpha.size() != 1)
+      {
+        mc_rtc::log::error_and_throw("[Observation:{}] Joint '{}' has {} velocity DoFs, expected 1", name(),
+                                     context.controllerJointOrder[static_cast<size_t>(controllerIndices_[i])],
+                                     alpha.size());
+      }
+      value = alpha[0];
+    }
+
+    if(relativeToDefaultVelocity_) value -= defaultVelocity_(static_cast<int>(i));
 
     out(static_cast<int>(i)) = scale_(static_cast<int>(i)) * value;
   }

@@ -15,9 +15,7 @@ mc_rtc::Configuration emptyConfiguration()
 
 } // namespace
 
-ObservationManager::ObservationManager()
-{
-}
+ObservationManager::ObservationManager() {}
 
 void ObservationManager::load(const mc_rtc::Configuration & observationsConfig,
                               const mc_rtc::Configuration & controllerConfig,
@@ -34,23 +32,23 @@ void ObservationManager::load(const mc_rtc::Configuration & observationsConfig,
 
   mc_rtc::Configuration observations = observationsConfig("observations");
 
+  Entry entry;
   for(size_t i = 0; i < observations.size(); ++i)
   {
     ObservationConfig config = parseObservationConfig(observations[i]);
     config.type = convention_.resolveType(config.requestedType);
 
-    Entry entry;
     entry.observation = registry.create(config, convention_);
     entries_.push_back(entry);
   }
 
+  newest_first_ = observationsConfig("history_order_newest_first", true);
+
   if(entries_.empty())
     mc_rtc::log::error_and_throw("[ObservationManager] observations.yaml defines an empty observation list");
 
-  mc_rtc::log::success(
-    "[ObservationManager] Loaded {} observations with '{}' convention",
-    entries_.size(),
-    convention_.name);
+  mc_rtc::log::success("[ObservationManager] Loaded {} observations with '{}' convention", entries_.size(),
+                       convention_.name);
 }
 
 void ObservationManager::configure(const ObservationContext & context)
@@ -74,8 +72,7 @@ void ObservationManager::updateHistory(const ObservationContext & context)
     Eigen::VectorXd current = Eigen::VectorXd::Zero(entry.observation->size());
     entry.observation->compute(context, current);
 
-    for(int h = 0; h < entry.observation->history(); ++h)
-      entry.historyBuffer.push_front(current);
+    for(int h = 0; h < entry.observation->history(); ++h) entry.historyBuffer.push_front(current);
   }
 }
 
@@ -87,14 +84,12 @@ Eigen::VectorXd ObservationManager::compute(const ObservationContext & context)
   for(size_t i = 0; i < entries_.size(); ++i)
   {
     Entry & entry = entries_[i];
-    // mc_rtc::log::warning("[ENtry] {} size {}", entry.observation->type(), entry.observation->size());
 
     Eigen::VectorXd current = Eigen::VectorXd::Zero(entry.observation->size());
     entry.observation->compute(context, current);
 
     entry.historyBuffer.push_front(current);
-    while(static_cast<int>(entry.historyBuffer.size()) > entry.observation->history())
-      entry.historyBuffer.pop_back();
+    while(static_cast<int>(entry.historyBuffer.size()) > entry.observation->history()) entry.historyBuffer.pop_back();
 
     Eigen::VectorXd flatten = flattenHistory(entry);
     out.segment(offset, flatten.size()) = flatten;
@@ -123,10 +118,7 @@ ObservationConfig ObservationManager::parseObservationConfig(const mc_rtc::Confi
 
   if(out.history <= 0)
   {
-    mc_rtc::log::error_and_throw(
-      "[ObservationManager] Observation '{}' has invalid history {}",
-      out.name,
-      out.history);
+    mc_rtc::log::error_and_throw("[ObservationManager] Observation '{}' has invalid history {}", out.name, out.history);
   }
 
   if(config.has("parameters"))
@@ -151,12 +143,25 @@ Eigen::VectorXd ObservationManager::flattenHistory(const Entry & entry) const
   }
 
   Eigen::VectorXd out = Eigen::VectorXd::Zero(total);
-  Eigen::Index offset = 0;
-  for(const auto & v : entry.historyBuffer)
+  if(newest_first_)
   {
-    out.segment(offset, v.size()) = v;
-    offset += v.size();
+    Eigen::Index offset = 0;
+    for(const auto & v : entry.historyBuffer)
+    {
+      out.segment(offset, v.size()) = v;
+      offset = offset += v.size();
+    }
   }
+  else
+  {
+    Eigen::Index offset = total - entry.historyBuffer[0].size();
+    for(const auto & v : entry.historyBuffer)
+    {
+      out.segment(offset, v.size()) = v;
+      offset -= v.size();
+    }
+  }
+
   return out;
 }
 

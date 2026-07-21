@@ -69,6 +69,11 @@ public:
   int actionSize() const;
 
   double policyStepSize() const { return policyStepSize_; }
+  double policyRate() const { return 1.0 / policyStepSize_; }
+  size_t policyUpdateCount() const { return policyUpdateCount_; }
+  const std::string & observationSource() const { return observationSource_; }
+  const std::string & baseBody() const { return baseBody_; }
+  size_t controlledActionSize() const { return controlledActionControllerIndices_.size(); }
   double phase() const { return phaseNormalized_; }
 
   bool useQP() const { return useQP_; }
@@ -90,6 +95,9 @@ public:
 
   void setPDGainsRatio(double ratio,
                        const std::shared_ptr<mc_tasks::TorqueJointTask> & torqueTask);
+
+  /** @brief Add one logger entry per configured observation/history element. */
+  void addLogObs(NewRLQPController & ctl);
 
   Eigen::Vector3d & command() { return command_; }
   const Eigen::Vector3d & command() const { return command_; }
@@ -156,6 +164,7 @@ private:
   bool useQP_ = true;
   double policyStepSize_ = 0.02;
   double policyTimer_ = 0.0;
+  size_t policyUpdateCount_ = 0;
 
   double phasePeriod_ = 1.0;
   double phaseElapsedTime_ = 0.0;

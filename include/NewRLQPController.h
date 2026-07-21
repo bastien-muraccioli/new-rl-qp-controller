@@ -56,7 +56,8 @@
  *  - use_QP:            Whether to route torques through the CBF-QP (true) or apply directly (false)
  *  - pd_gains_ratio:    Runtime gain scaling factor (1.0 = nominal gains)
  *  - action_joints:     Joints on which to apply the action. Can be a pre-registered name such as "legs"
- *  - period_ms          Frequency at which the policy should be ran
+ *  - period_s:          Policy inference period in seconds
+ *  - frequency_hz:      Alternative to period_s; policy inference frequency in hertz
  *  observations.yaml :
  *  - training_convention     Convention to load default values and aliases from
  *  - list of observations and their parameters

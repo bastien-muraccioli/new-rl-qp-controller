@@ -19,11 +19,15 @@ public:
   JointPosObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
   void configure(const ObservationContext & context) override;
-  int size() const override { return static_cast<int>(mbcIndices_.size()); }
+  int size() const override
+  {
+    return static_cast<int>(controllerIndices_.size());
+  }
   void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
 
 private:
-  std::vector<int> mbcIndices_; ///< mbc().q indices, pre-computed at configure time
+  std::vector<int> controllerIndices_;
+  std::vector<int> mbcIndices_;
   bool relativeToDefaultPose_ = true;
   Eigen::VectorXd defaultPose_;
   Eigen::VectorXd scale_;
@@ -36,11 +40,15 @@ public:
   JointVelObservation(const ObservationConfig & config, const ObservationConvention & convention);
 
   void configure(const ObservationContext & context) override;
-  int size() const override { return static_cast<int>(mbcIndices_.size()); }
+  int size() const override
+  {
+    return static_cast<int>(controllerIndices_.size());
+  }
   void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
 
 private:
-  std::vector<int> mbcIndices_; ///< mbc().alpha indices, pre-computed at configure time
+  std::vector<int> controllerIndices_;
+  std::vector<int> mbcIndices_;
   bool relativeToDefaultVelocity_ = true;
   Eigen::VectorXd defaultVelocity_;
   Eigen::VectorXd scale_;

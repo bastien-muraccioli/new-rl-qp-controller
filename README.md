@@ -60,7 +60,7 @@ default_policy_index: 0
 
 policies:
   - use_QP: true
-    policy_step_size: 0.02      # Policy runs at 50 Hz
+    frequency_hz: 50.0         # Alternatively: period_s: 0.02
     physics_step_size: 0.0025   # Controller runs at 400 Hz
     pd_gains_ratio: 1.0
 

@@ -8,10 +8,8 @@ action:
 
 control:
   use_QP: true
-  use_torque_control: false
-  kp_scale: 1.0
-  kd_scale: 1.0
-  period_ms: 20.0
+  pd_gains_ratio: 1.0
+  frequency_hz: 50.0
 
   kp:
     left_hip_yaw_joint: 100.0

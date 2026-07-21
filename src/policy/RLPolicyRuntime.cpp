@@ -57,6 +57,7 @@ void RLPolicyRuntime::reset(NewRLQPController & ctl)
   phaseNormalized_ = 0.0;
   resetObservationHistory(ctl);
   policyTimer_ = policyStepSize_;
+  policyUpdateCount_ = 0;
 }
 
 void RLPolicyRuntime::runPolicyStepIfNeeded(NewRLQPController & ctl, double dt)
@@ -82,6 +83,7 @@ void RLPolicyRuntime::runPolicyStepIfNeeded(NewRLQPController & ctl, double dt)
       currentObservation_.size(), policy_->getObservationSize());
 
   currentAction_ = policy_->predict(currentObservation_);
+  ++policyUpdateCount_;
   // mc_rtc::log::warning("TEST {}", currentAction_);
 
   if(currentAction_.size() != static_cast<int>(actionToControllerMap_.size()))
@@ -104,7 +106,7 @@ void RLPolicyRuntime::runPolicyStepIfNeeded(NewRLQPController & ctl, double dt)
     }
   }
 
-  policyTimer_ = 0.0;
+  policyTimer_ = std::fmod(policyTimer_, policyStepSize_);
 }
 
 void RLPolicyRuntime::reloadCurrentPolicy(NewRLQPController & ctl,
@@ -146,7 +148,7 @@ void RLPolicyRuntime::setPDGainsRatio(double ratio,
 {
   pdGainsRatio_ = ratio;
   kp_ = pdGainsRatio_ * kpBase_;
-  kd_ = pdGainsRatio_ * kdBase_;
+  kd_ = std::sqrt(pdGainsRatio_) * kdBase_;
 
   if(torqueTask)
   {
@@ -181,6 +183,7 @@ void RLPolicyRuntime::loadPolicy(const std::string & policyName,
   validateObservationAgainstNetwork();
 
   policyTimer_ = policyStepSize_;
+  policyUpdateCount_ = 0;
 
   mc_rtc::log::success(
     "[RLPolicyRuntime] Policy '{}' loaded. Observation size: {}, action size: {}",
@@ -193,7 +196,15 @@ void RLPolicyRuntime::configureControl(const PolicyConfig & policy,
 {
   useQP_ = policy.useQP;
   policyStepSize_ = policy.policyStepSize;
-  pdGainsRatio_ = policy.kpScale;
+  pdGainsRatio_ = policy.pdGainsRatio;
+
+  if(policyStepSize_ + 1e-8 < ctl.timeStep)
+  {
+    mc_rtc::log::warning(
+        "[RLPolicyRuntime:{}] Policy period ({:.3f} ms) is shorter than the controller step ({:.3f} ms); "
+        "the requested policy rate cannot be reached.",
+        policy.name, 1000.0 * policyStepSize_, 1000.0 * ctl.timeStep);
+  }
 
   phasePeriod_ = policy.observationsConfiguration("phase_period", 1.0);
   
@@ -215,8 +226,8 @@ void RLPolicyRuntime::configureControl(const PolicyConfig & policy,
   kpBase_ = Eigen::Map<const Eigen::VectorXd>(policy.kp.data(), policy.kp.size());
   kdBase_ = Eigen::Map<const Eigen::VectorXd>(policy.kd.data(), policy.kp.size());
 
-  kp_ = policy.kpScale * kpBase_;
-  kd_ = policy.kdScale * kdBase_;
+  kp_ = pdGainsRatio_ * kpBase_;
+  kd_ = std::sqrt(pdGainsRatio_) * kdBase_;
 
   if(torqueTask)
   {
@@ -394,6 +405,30 @@ mc_rbdyn::Robot & RLPolicyRuntime::selectedObservationRobot(NewRLQPController & 
   if(observationSource_ == "robot")
     return ctl.robot();
   return ctl.realRobot(robotName_);
+}
+
+
+void RLPolicyRuntime::addLogObs(NewRLQPController & ctl)
+{
+  for(const auto & entry : observationManager_.entries())
+  {
+    const std::string baseName = "NewRLQPController_Observations_" + entry.observation->name();
+    const size_t size = entry.historyBuffer.size();
+    if(size == 1)
+    {
+      ctl.logger().addLogEntry(baseName, [entry]() { return entry.historyBuffer[0]; });
+    }
+    else if(size > 1)
+    {
+      for(size_t i = 0; i < size; ++i)
+      {
+        const size_t bufferIndex = observationManager_.newest_first() ? i : size - 1 - i;
+        const std::string suffix = i == 0 ? "_t" : "_t-" + std::to_string(i);
+        ctl.logger().addLogEntry(baseName + suffix,
+                                 [entry, bufferIndex]() { return entry.historyBuffer[bufferIndex]; });
+      }
+    }
+  }
 }
 
 } // namespace rlqp
