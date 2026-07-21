@@ -11,7 +11,7 @@ find_library(ONNXRUNTIME_LIB
 )
 
 set(controller_SRC
-  H1RLQPController.cpp
+  NewRLQPController.cpp
   observation/Observation.cpp
   observation/Observations.cpp
   observation/ObservationManager.cpp
@@ -22,7 +22,7 @@ set(controller_SRC
 )
 
 set(controller_HDR
-  ../include/H1RLQPController.h
+  ../include/NewRLQPController.h
   ../include/api.h
   ../include/observation/Observation.h
   ../include/observation/Observations.h
@@ -35,7 +35,7 @@ set(controller_HDR
 
 add_library(${PROJECT_NAME} SHARED ${controller_SRC} ${controller_HDR})
 set_target_properties(${PROJECT_NAME} PROPERTIES COMPILE_FLAGS
-                                                 "-DH1RLQPController_EXPORTS")
+                                                 "-DNewRLQPController_EXPORTS")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC mc_rtc::mc_control_fsm)
 

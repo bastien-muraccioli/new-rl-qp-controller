@@ -59,9 +59,9 @@ ObserverPipelines:
 states: {}
 
 transitions:
-  - [H1RLQPController_Initial, OK, H1RLQPController_Initial, Strict]
+  - [NewRLQPController_Initial, OK, NewRLQPController_Initial, Strict]
 
-init: H1RLQPController_Initial
+init: NewRLQPController_Initial
 
 policies_root: "@CMAKE_CURRENT_SOURCE_DIR@/policies"
 

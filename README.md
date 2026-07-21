@@ -23,15 +23,15 @@ It comes with:
 Quick start
 --
 
-1. Renaming the controller from `H1RLQPController` to `MyController`. In a shell (Git Bash on Windows, replace sed with gsed on macOS):
+1. Renaming the controller from `NewRLQPController` to `MyController`. In a shell (Git Bash on Windows, replace sed with gsed on macOS):
 
 ```bash
-sed -i -e's/H1RLQPController/MyController/g' `find . -not -path '*/.*' -type f`
-git mv src/H1RLQPController.cpp src/MyController.cpp
-git mv src/H1RLQPController.h src/MyController.h
-git mv src/states/H1RLQPController_Initial.cpp src/states/MyController_Initial.cpp
-git mv src/states/H1RLQPController_Initial.h src/states/MyController_Initial.h
-git mv etc/H1RLQPController.in.yaml etc/MyController.in.yaml
+sed -i -e's/NewRLQPController/MyController/g' `find . -not -path '*/.*' -type f`
+git mv src/NewRLQPController.cpp src/MyController.cpp
+git mv src/NewRLQPController.h src/MyController.h
+git mv src/states/NewRLQPController_Initial.cpp src/states/MyController_Initial.cpp
+git mv src/states/NewRLQPController_Initial.h src/states/MyController_Initial.h
+git mv etc/NewRLQPController.in.yaml etc/MyController.in.yaml
 ```
 
 2. You can customize the project name in vcpkg.json as well, note that this must follow [vcpkg manifest rules](https://github.com/microsoft/vcpkg/blob/master/docs/users/manifests.md)
@@ -99,7 +99,7 @@ policies:
 Open `src/utils.cpp` and fill in `getCurrentObservation()` for your policy
 index. The observation must exactly match the training environment.
 
-Then implement `initializeRLObservation()` in `H1RLQPController.cpp` to
+Then implement `initializeRLObservation()` in `NewRLQPController.cpp` to
 populate index 0 of each buffer from the current robot state.
 
 Example for a policy with history_length=5 can be found in the commented parts of the code.
