@@ -6,11 +6,9 @@ IdleKeepState: false
 StatesLibraries:
   - "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@"
   - "@MC_STATES_RUNTIME_INSTALL_PREFIX@"
-
 StatesFiles:
   - "@MC_STATES_DEFAULT_RUNTIME_INSTALL_PREFIX@/data"
   - "@MC_STATES_RUNTIME_INSTALL_PREFIX@/data"
-
 VerboseStateFactory: false
 
 robots:
@@ -18,52 +16,45 @@ robots:
     module: env/ground
 
 robot:
-  base_body: pelvis
+  # TODO(robot): adjust the body used by floating-base observations.
+  base_body: base_link
+  # realRobot is usually appropriate on hardware; robot can be useful in simulation.
   observation_source: realRobot
 
 collisions:
   - type: collision
     useMinimal: true
 
+# Constraint examples. Keep only constraints supported by your robot and application.
+# constraints:
+#   - type: contact
+#     contactType: acceleration
+#   - type: compoundJoint
+
+# TODO(robot): adjust the ObserverPipeline
 ObserverPipelines:
   name: MainPipeline
   gui: true
   log: true
-
   observers:
     - type: Encoder
       config:
-          velocity: encoderVelocities
-    - type: BodySensor
-      update: true
-      bodySensor: FloatingBase
-    - type: Tilt
-      required: true
-      update: true
-      config:
-        anchorFrameFunction: anchorFrameFunction
-        filterGains:
-          initAlpha: 2
-          initBeta: 2
-          initGamma: 1
-          finalAlpha: 2
-          finalBeta: 2
-          finalGamma: 1
-    - type: ExternalForcesObserver
-      estimation_method: MomentumObserver
-      use_forces_from_ft_sensors: false
-      residual_gain: 100
-      torque_source_type: CommandedTorque
-
+        velocity: encoderVelocities
+    # Example BodySensor observer:
+    # - type: BodySensor
+    #   update: true
+    #   bodySensor: FloatingBase
+    # Example external torque observer (robo-specific adjustments needed):
+    # - type: ExternalForcesObserver
+    #   estimation_method: MomentumObserver
+    #   use_forces_from_ft_sensors: false
+    #   residual_gain: 100
+    #   torque_source_type: CommandedTorque
 
 states: {}
-
 transitions:
   - [NewRLQPController_Initial, OK, NewRLQPController_Initial, Strict]
-
 init: NewRLQPController_Initial
 
 policies_root: "@CMAKE_CURRENT_SOURCE_DIR@/policies"
-
-
-default_policy: standing_h1
+default_policy: policyName1

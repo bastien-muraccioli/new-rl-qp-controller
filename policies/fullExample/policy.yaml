@@ -1,0 +1,55 @@
+# Full policy configuration reference.
+# Every policy-level field currently accepted by the controller is represented.
+
+# Optional. Defaults to the policy directory name.
+name: fullExample
+
+# Optional. Defaults to <name>.onnx.
+onnx: fullExample.onnx
+
+action:
+  # Required. Joint group defining the ONNX action vector order and size.
+  joints: all
+
+  # Optional. Defaults to action.joints. Used when only a subset of joints should be applied (ex: policy outputs all joints while only legs should be used)
+  controlled_joints: joint_subset
+
+  # Optional. May be either one scalar for every joint...
+  # scale: 1.0
+  # ...or a complete or partial per-joint map. Unspecified joints use 1.0.
+  scale:
+    jointName1: 1.0
+    jointName2: 1.0
+    jointName3: 1.0
+
+  # Optional. When present, this map must contain every controller joint.
+  q0:
+    jointName1: 0.0
+    jointName2: 0.0
+    jointName3: 0.0
+
+control:
+  # Optional. Defaults to true.
+  use_QP: true
+
+  # Optional policy period. Defaults to 0.02 s.
+  # Specify either one of period_s and frequency_hz.
+  period_s: 0.02
+  # frequency_hz: 50.0
+
+  # Optional. Defaults to 1.0. Runtime gains are
+  # Kp = ratio * kp and Kd = sqrt(ratio) * kd.
+  pd_gains_ratio: 1.0
+
+  # Optional unless a phase observation is used. Defaults to 1.0 s.
+  phase_period: 1.0
+
+  # Required maps. They must contain every joint in robot().refJointOrder().
+  kp:
+    jointName1: 100.0
+    jointName2: 100.0
+    jointName3: 100.0
+  kd:
+    jointName1: 10.0
+    jointName2: 10.0
+    jointName3: 10.0

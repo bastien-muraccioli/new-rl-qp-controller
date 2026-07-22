@@ -1,162 +1,36 @@
+# Robot/training-environment conventions used to interpret observation names and joint order.
+
 conventions:
   general:
     observation_defaults:
-      base_orientation:
-        sensor: Accelerometer
-        scale: 1.0
+      # Optional : if any general observation default could to be specify, specify them here. Example :
+      # base_orientation:
+      #   sensor: Accelerometer
+      #   scale: 1.0
 
-      phase:
-        offset: 0.0
-        scale: 1.0
-
-  mjlab:
+  trainingConvention1: # example : mjlab, isaaclab, custom
     joint_groups:
+      # TODO(robot): replace placeholder joint names
+      # The order here must exactly match the policy training/export order.
+      # These joint groups can be used to resolve the joint order/joints used by the observations, as well as the actions outputed by the policy.
       all: [
-        "left_hip_yaw_joint",
-        "right_hip_yaw_joint",
-        "torso_joint",
-        "left_hip_roll_joint",
-        "right_hip_roll_joint",
-        "left_shoulder_pitch_joint",
-        "right_shoulder_pitch_joint",
-        "left_hip_pitch_joint",
-        "right_hip_pitch_joint",
-        "left_shoulder_roll_joint",
-        "right_shoulder_roll_joint",
-        "left_knee_joint",
-        "right_knee_joint",
-        "left_shoulder_yaw_joint",
-        "right_shoulder_yaw_joint",
-        "left_ankle_joint",
-        "right_ankle_joint",
-        "left_elbow_joint",
-        "right_elbow_joint"
-      ]
-      legs: [
-        "left_hip_yaw_joint",
-        "right_hip_yaw_joint",
-        "left_hip_roll_joint",
-        "right_hip_roll_joint",
-        "left_hip_pitch_joint",
-        "right_hip_pitch_joint",
-        "left_knee_joint",
-        "right_knee_joint",
-        "left_ankle_joint",
-        "right_ankle_joint",
-      ]
+        "jointName1",
+        "jointName2",
+        "jointName3"
+        ]
+      joint_subset: [
+        "jointName1",
+        "jointName2"
+        ]
 
     type_aliases:
-      base_lin_vel: base_lin_vel
-      base_ang_vel: base_ang_vel
-      projected_gravity: projected_gravity
-      base_orientation: base_orientation
-      phase: phase
-      joint_pos_rel: joint_pos
-      joint_vel_rel: joint_vel
-      last_action: last_action
-      generated_commands: command
+      # Optional : aliases can be specified for the observations (to fit their training environment name or else). Example :
+      # builtin_sensor: force_sensor # (alias: available_observation)
 
     observation_defaults:
-      base_lin_vel:
-        scale: 1.0
+      # Optional : if any convention-specific observation default could to be specify, specify them here. Example :
+      # joint_pos:
+      #   joints: joint_subset
+      #   relative_to_default_pose: true
 
-      base_ang_vel:
-        scale: 1.0
-
-      projected_gravity:
-        scale: 1.0
-
-      joint_pos_rel:
-        joints: all
-        relative_to_default_pose: false
-        scale: 1.0
-
-      joint_vel_rel:
-        joints: all
-        relative_to_default_velocity: false
-        scale: 1.0
-
-      last_action:
-        scale: 1.0
-
-      generated_commands:
-        size: 3
-        scale: 1.0
-
-  isaaclab:
-    joint_groups:
-      all: [
-        "left_hip_yaw_joint",
-        "right_hip_yaw_joint",
-        "torso_joint",
-        "left_hip_roll_joint",
-        "right_hip_roll_joint",
-        "left_shoulder_pitch_joint",
-        "right_shoulder_pitch_joint",
-        "left_hip_pitch_joint",
-        "right_hip_pitch_joint",
-        "left_shoulder_roll_joint",
-        "right_shoulder_roll_joint",
-        "left_knee_joint",
-        "right_knee_joint",
-        "left_shoulder_yaw_joint",
-        "right_shoulder_yaw_joint",
-        "left_ankle_joint",
-        "right_ankle_joint",
-        "left_elbow_joint",
-        "right_elbow_joint"
-      ]
-      legs: [
-        "left_hip_yaw_joint",
-        "right_hip_yaw_joint",
-        "left_hip_roll_joint",
-        "right_hip_roll_joint",
-        "left_hip_pitch_joint",
-        "right_hip_pitch_joint",
-        "left_knee_joint",
-        "right_knee_joint",
-        "left_ankle_joint",
-        "right_ankle_joint",
-      ]
-
-    type_aliases:
-      base_lin_vel: base_lin_vel
-      base_ang_vel: base_ang_vel
-      projected_gravity: projected_gravity
-      base_orientation: base_orientation
-      phase: phase
-      joint_pos: joint_pos
-      joint_vel: joint_vel
-      last_action: last_action
-      command: command
-
-    observation_defaults:
-      base_lin_vel:
-        scale: 1.0
-
-      base_ang_vel:
-        scale: 1.0
-
-      projected_gravity:
-        scale: 1.0
-
-      base_orientation:
-        sensor: FloatingBase
-        scale: 1.0
-
-      joint_pos:
-        joints: all
-        relative_to_default_pose: true
-        scale: 1.0
-
-      joint_vel:
-        joints: all
-        relative_to_default_velocity: false
-        scale: 1.0
-
-      last_action:
-        scale: 1.0
-
-      command:
-        size: 3
-        scale: 1.0
+# Add as many conventions as needed.

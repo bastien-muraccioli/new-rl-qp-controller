@@ -181,4 +181,48 @@ private:
   bool cos_first_ = true;
 };
 
+/**
+ * @brief Observation from a force sensor by name - log compressed data
+ *
+ * Handles an array of sensor, their data will be concatenated
+ */
+class LogForceSensorObservation : public Observation
+{
+public:
+  LogForceSensorObservation(const ObservationConfig & config, const ObservationConvention & convention);
+
+  void configure(const ObservationContext & context) override;
+  int size() const override
+  {
+    return size_;
+  };
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+
+private:
+  std::vector<std::string> sensor_names_ = {};
+  int size_ = 0;
+};
+
+/**
+ * @brief Observation from a force sensor by name - raw data
+ *
+ * Handles an array of sensor, their data will be concatenated
+ */
+class ForceSensorObservation : public Observation
+{
+public:
+  ForceSensorObservation(const ObservationConfig & config, const ObservationConvention & convention);
+
+  void configure(const ObservationContext & context) override;
+  int size() const override
+  {
+    return size_;
+  };
+  void compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const override;
+
+private:
+  std::vector<std::string> sensor_names_ = {};
+  int size_ = 0;
+};
+
 } // namespace rlqp

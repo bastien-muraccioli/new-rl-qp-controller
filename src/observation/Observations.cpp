@@ -423,5 +423,80 @@ void PhaseObservation::compute(const ObservationContext & context, Eigen::Ref<Ei
   out(cos_first_) = scale_(1) * std::sin(angle);
 }
 
+//============================================================================//
+// LogForceSensorObservation
+//============================================================================//
+
+LogForceSensorObservation::LogForceSensorObservation(const ObservationConfig & config,
+                                                     const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
+
+void LogForceSensorObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+      context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
+
+  sensor_names_ = readParameter<std::vector<std::string>>(parameters, "sensor_names", {});
+  if(sensor_names_.size() == 0)
+    mc_rtc::log::error_and_throw("[ForceSensorObservation] Please specify at least one force sensor");
+
+  size_ = sensor_names_.size() * 3;
+}
+
+void LogForceSensorObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  auto log1p_compress = [](const Eigen::Vector3d & f) -> Eigen::Vector3d
+  {
+    return Eigen::Vector3d(std::copysign(std::log1p(std::abs(f.x())), f.x()),
+                           std::copysign(std::log1p(std::abs(f.y())), f.y()),
+                           std::copysign(std::log1p(std::abs(f.z())), f.z()));
+  };
+  out = Eigen::VectorXd::Zero(size_);
+  int i = 0;
+  for(const auto & sensor_name : sensor_names_)
+  {
+    const auto & forceSensor = context.observationRobot.forceSensor(sensor_name);
+    out.segment(i, 3) = log1p_compress(forceSensor.worldWrench(context.observationRobot).force());
+    ;
+    i += 3;
+  }
+}
+
+//============================================================================//
+// ForceSensorObservation
+//============================================================================//
+
+ForceSensorObservation::ForceSensorObservation(const ObservationConfig & config,
+                                               const ObservationConvention & convention)
+: Observation(config, convention)
+{
+}
+
+void ForceSensorObservation::configure(const ObservationContext & context)
+{
+  mc_rtc::Configuration parameters =
+      context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
+
+  sensor_names_ = readParameter<std::vector<std::string>>(parameters, "sensor_names", {});
+  if(sensor_names_.size() == 0)
+    mc_rtc::log::error_and_throw("[ForceSensorObservation] Please specify at least one force sensor");
+
+  size_ = sensor_names_.size() * 3;
+}
+
+void ForceSensorObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
+{
+  out = Eigen::VectorXd::Zero(size_);
+  int i = 0;
+  for(const auto & sensor_name : sensor_names_)
+  {
+    const auto & forceSensor = context.observationRobot.forceSensor(sensor_name);
+    out.segment(i, 3) = forceSensor.worldWrench(context.observationRobot).force();
+    ;
+    i += 3;
+  }
+}
 
 } // namespace rlqp

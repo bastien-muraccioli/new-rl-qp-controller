@@ -1,0 +1,90 @@
+# Full observation configuration reference.
+# Every top-level field and every parameter currently accepted by the built-in
+# observations is represented.
+
+training_convention: trainingConvention1
+
+# Optional. Defines the order in which to handle all observations history. Defaults to true.
+history_order_newest_first: true
+
+observations:
+  - type: joint_pos
+    # Optional debug/log label. Defaults to type.
+    name: joint_positions
+    parameters:
+      # Optional. Defaults to 1 and must be positive.
+      history: 1
+      # Optional. May be a named group or an explicit list of joint names.
+      joints: all # OR joints: [jointName1, jointName2, jointName3]
+      # Optional. Defaults to true.
+      relative_to_default_pose: true
+      # Optional scalar or vector matching the observation size.
+      scale: 1.0
+
+  - type: joint_vel
+    name: joint_velocities
+    parameters:
+      history: 1
+      joints: all
+      relative_to_default_velocity: true
+      scale: [1.0, 1.0, 1.0]
+
+  - type: projected_gravity
+    parameters:
+      history: 1
+      # Optional. Defaults to robot.base_body from the controller configuration.
+      body: baseBodyName
+      scale: [1.0, 1.0, 1.0]
+
+  - type: base_ang_vel
+    parameters:
+      history: 1
+      # Optional. Defaults to "Accelerometer".
+      sensor: Accelerometer
+      scale: [1.0, 1.0, 1.0]
+
+  - type: base_lin_vel
+    parameters:
+      history: 1
+      sensor: Accelerometer
+      scale: [1.0, 1.0, 1.0]
+
+  - type: base_orientation
+    parameters:
+      history: 1
+      sensor: Accelerometer
+      # Optional RPY component indices. Defaults to [0, 1, 2].
+      index: [0, 1, 2]
+      scale: [1.0, 1.0, 1.0]
+
+  - type: phase # [cos(phase), sin(phase)] or [sin(phase), cos(phase)]
+    parameters:
+      history: 1
+      # Optional normalized phase offset. Defaults to 0.0.
+      offset: 0.0
+      # Optional. Defaults to cos first, then sin.
+      cos_first: true
+      scale: [1.0, 1.0]
+
+  - type: last_action
+    parameters:
+      history: 1
+      joints: all
+      scale: 1.0
+
+  - type: command
+    parameters:
+      history: 1
+      # Optional command size in [1, 3]. Defaults to 3.
+      size: 3
+      scale: [1.0, 1.0, 1.0]
+  
+  - type: log_force_sensor
+    parameters:
+      history: 1
+      sensor_name: ["ForceSensor1", "ForceSensor2"]
+
+  - type: force_sensor
+    parameters:
+      history: 1
+      sensor_name: ["ForceSensor1", "ForceSensor2"]

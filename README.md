@@ -1,5 +1,4 @@
-mc_rtc new RL-QP controller template
-==
+# mc_rtc RL-QP controller template
 
 This project is a template for a new RL-QP controller project wihtin [mc_rtc].
 
@@ -14,113 +13,83 @@ Further details are available in:
 
 [*Safe Execution of RL Policies via Acceleration-based CBF-QP Constraint Enforcement for Real-World Robotic Deployments*](https://hal.science/hal-05362571)
 
-
 It comes with:
 - a CMake project that can build a controller in [mc_rtc], the project can be put within [mc_rtc] source-tree for easier updates
 - clang-format files
 - automated GitHub Actions builds on three major platforms
 
+Currently only ONNX format policies are supported.
+
+This template has already been adapted to :
+- [H1]()
+- [HRP5P]()
+
+If the target robot is already supported, please refer to the corresponding repository above. Otherwise, this template is intended as a starting point for integrating additional robots.
+
 Quick start
 --
 
-1. Renaming the controller from `NewRLQPController` to `MyController`. In a shell (Git Bash on Windows, replace sed with gsed on macOS):
+1. Fork this repository and name it after your robot. Example : `robotname_rl_qp_controller`.
+
+2. Renaming the controller from `NewRLQPController` to `RobotNameRLQPController`. In a shell (Git Bash on Windows, replace sed with gsed on macOS):
 
 ```bash
-sed -i -e's/NewRLQPController/MyController/g' `find . -not -path '*/.*' -type f`
-git mv src/NewRLQPController.cpp src/MyController.cpp
-git mv src/NewRLQPController.h src/MyController.h
-git mv src/states/NewRLQPController_Initial.cpp src/states/MyController_Initial.cpp
-git mv src/states/NewRLQPController_Initial.h src/states/MyController_Initial.h
-git mv etc/NewRLQPController.in.yaml etc/MyController.in.yaml
+sed -i -e's/NewRLQPController/RobotNameRLQPController/g' `find . -not -path '*/.*' -type f`
+git mv src/NewRLQPController.cpp src/RobotNameRLQPController.cpp
+git mv src/NewRLQPController.h src/RobotNameRLQPController.h
+git mv src/states/NewRLQPController_Initial.cpp src/states/RobotNameRLQPController_Initial.cpp
+git mv src/states/NewRLQPController_Initial.h src/states/RobotNameRLQPController_Initial.h
+git mv etc/NewRLQPController.in.yaml etc/RobotNameRLQPController.in.yaml
 ```
 
-2. You can customize the project name in vcpkg.json as well, note that this must follow [vcpkg manifest rules](https://github.com/microsoft/vcpkg/blob/master/docs/users/manifests.md)
+3. You can customize the project name in vcpkg.json as well, note that this must follow [vcpkg manifest rules](https://github.com/microsoft/vcpkg/blob/master/docs/users/manifests.md)
 
-2. Build and install the project
+4. Build and install the project
 
-3. Run using your [mc_rtc] interface of choice, and setting `Enabled` to `MyController`
+5. Run using your [mc_rtc] interface of choice, and setting `Enabled` to `RobotNameRLQPController`
 
 ---
 
-## Tutorial: Deploying your own RL policy
+## Template layout
 
-### Step 1 — Export your policy to ONNX
+- `policies/minimalExample/`: smallest explicitly configured policy accepted by the current parser.
+- `policies/fullExample/`: exhaustive reference for every currently accepted policy and observation fields.
+- `policies/conventions.yaml`: placeholder joint groups, training orders, aliases and observation defaults.
+- `etc/NewRLQPController.in.yaml`: controller, observer and constraint examples.
+- `src/states/NewRLQPController_Initial.cpp`: policy-execution state.
+- `src/observation/`: reusable observation implementations.
+- `src/policy/`: policy loading, validation, ONNX inference and runtime state.
 
-Place the `.onnx` file somewhere accessible and set `policy_path` in the YAML
-config.
+## Required robot adaptation
 
-### Step 2 — Fill in the YAML config
+The source marks adaptation points with `TODO(robot)`. Search them before attempting to run the controller:
 
-Edit `etc/MyController.in.yaml`. Each entry under `policies` corresponds to
-one ONNX file (indexed by `default_policy_index`):
-
-```yaml
-policy_path: ["my_policy.onnx"]
-default_policy_index: 0
-
-policies:
-  - use_QP: true
-    frequency_hz: 50.0         # Alternatively: period_s: 0.02
-    physics_step_size: 0.0025   # Controller runs at 400 Hz
-    pd_gains_ratio: 1.0
-
-    # Per-joint action scale: typically effort_limit / Kp
-    action_scale:
-      joint_a: 0.88
-      joint_b: 0.57
-      # ...
-
-    # PD gains matching those used during RL training
-    kp:
-      joint_a: 112.6
-      joint_b: 417.2
-      # ...
-    kd:
-      joint_a: 17.9
-      joint_b: 66.4
-      # ...
-
-    # Default/reference pose used during training (radians)
-    # A zero policy output commands this pose
-    q0:
-      joint_a: 0.0
-      joint_b: 0.872   # 50°
-      # ...
-
-    # Order of joints in the policy's action vector
-    ref_joint_order:
-      - "joint_a"
-      - "joint_b"
-      # ...
+```bash
+grep -rn "TODO(robot)"
 ```
 
-### Step 3 — Implement the observation
+## Deploy your own policy
 
-Open `src/utils.cpp` and fill in `getCurrentObservation()` for your policy
-index. The observation must exactly match the training environment.
+Policies are stored in `policies`. Each subdirectory describes everything the controller needs to know to load. run and use the policy.
+You here have access to 2 example directories. `minimalExample` with a basic, minimal configuration, and `fullExample` to have a better idea of the full potential of the default version of this controller.
 
-Then implement `initializeRLObservation()` in `NewRLQPController.cpp` to
-populate index 0 of each buffer from the current robot state.
+1. Create a new subdirectory in `policies`
+1. Add the exported model in ONNX format inside
+2. set the action and controlled-joint groups, provide training-consistent `kp` and `kd`, and add any required action scaling, default pose, phase period or command parameters in `policy.yaml`
+5. reproduce the exact observation order and history in `observations.yaml`.
 
-Example for a policy with history_length=5 can be found in the commented parts of the code.
+Set `default_policy` in `etc/NewRLQPController.in.yaml`.
 
-### Step 4 — Tune CBF parameters
+## Build
 
-The CBF gains control how aggressively the QP enforces safety constraints.
-Start with the defaults and increase if limits are breached.
-Enable limit monitoring from the GUI ("Toggle print joint limits") to see
-which constraints are being approached.
+```bash
+mkdir -p build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=RelWithDebInfo
+cmake --build . -j
+sudo cmake --install .
+```
 
-### Step 5 — Test without QP first
-
-Set `use_QP: false` in the config (or toggle from the GUI) to apply torques
-directly without the QP safety layer. This is useful to:
-- Verify the observation and action pipeline is correct
-- Compare behavior with and without CBF corrections
-
-Once the policy runs correctly without QP, enable it for safe deployment.
-
----
+Enable your controller in mc_rtc after completing all required adaptation points.
 
 ## Control flow summary
 

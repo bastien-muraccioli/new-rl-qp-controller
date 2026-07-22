@@ -2,7 +2,7 @@
 
 #include <NewRLQPController.h>
 
-void NewRLQPController_Initial::configure(const mc_rtc::Configuration & config) {}
+void NewRLQPController_Initial::configure(const mc_rtc::Configuration &) {}
 
 void NewRLQPController_Initial::start(mc_control::fsm::Controller & ctl_)
 {

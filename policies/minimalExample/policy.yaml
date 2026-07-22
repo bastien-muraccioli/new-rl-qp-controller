@@ -1,0 +1,19 @@
+# Minimal policy configuration accepted by PolicyConfig.
+#
+# The policy name defaults to the directory name (minimalExample).
+# The ONNX filename defaults to <policy name>.onnx, i.e. minimalExample.onnx.
+
+action:
+  # Required: named joint group from ../conventions.yaml defining the ONNX output order.
+  joints: all
+
+control:
+  # Required: kp and kd must contain every joint in robot().refJointOrder().
+  kp:
+    jointName1: 100.0
+    jointName2: 100.0
+    jointName3: 100.0
+  kd:
+    jointName1: 10.0
+    jointName2: 10.0
+    jointName3: 10.0

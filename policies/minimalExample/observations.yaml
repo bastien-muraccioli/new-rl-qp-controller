@@ -1,0 +1,28 @@
+# Minimal observation configuration.
+# The observation order must exactly match the ONNX input tensor.
+training_convention: trainingConvention1
+
+observations:
+  - type: base_lin_vel
+    parameters:
+      history: 1
+
+  - type: base_ang_vel
+    parameters:
+      history: 1
+
+  - type: projected_gravity
+    parameters:
+      history: 1
+
+  - type: joint_pos
+    parameters:
+      history: 1
+
+  - type: joint_vel
+    parameters:
+      history: 1
+
+  - type: last_action
+    parameters:
+      history: 1

@@ -295,6 +295,8 @@ ObservationRegistry makeDefaultObservationRegistry()
   registry.registerType("phase", &makeObservation<PhaseObservation>);
   registry.registerType("last_action", &makeObservation<LastActionObservation>);
   registry.registerType("command", &makeObservation<CommandObservation>);
+  registry.registerType("log_force_sensor", &makeObservation<LogForceSensorObservation>);
+  registry.registerType("force_sensor", &makeObservation<ForceSensorObservation>);
 
   return registry;
 }
