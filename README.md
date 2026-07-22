@@ -1,3 +1,11 @@
+<p align="center">
+  <a >
+    <img src="ext/image/logo.png" alt="logo" width="300">
+  </a>
+</p>
+
+---
+
 # mc_rtc RL-QP controller template
 
 This project is a template for a new RL-QP controller project wihtin [mc_rtc].
