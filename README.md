@@ -29,34 +29,18 @@ It comes with:
 Currently only ONNX format policies are supported.
 
 This template has already been adapted to :
-- [H1]()
-- [HRP5P]()
+- [H1](https://github.com/Alhuuin/h1_rl_qp_controller)
+- [HRP5P](https://github.com/bastien-muraccioli/hrp5p_rl_qp_controller)
 
-If the target robot is already supported, please refer to the corresponding repository above. Otherwise, this template is intended as a starting point for integrating additional robots.
+If the target robot is already supported, please refer to the corresponding repository above. Otherwise, this template is intended as a starting point to integrate additional robots.
 
-Quick start
---
+## Documentation
 
-1. Fork this repository and name it after your robot. Example : `robotname_rl_qp_controller`.
+The complete documentation, including the controller architecture, observation system, policy configuration, adaptation guide and API reference, is available at:
 
-2. Renaming the controller from `NewRLQPController` to `RobotNameRLQPController`. In a shell (Git Bash on Windows, replace sed with gsed on macOS):
+**https://alhuuin.github.io/rl-qp-controller.github.io/**
 
-```bash
-sed -i -e's/NewRLQPController/RobotNameRLQPController/g' `find . -not -path '*/.*' -type f`
-git mv src/NewRLQPController.cpp src/RobotNameRLQPController.cpp
-git mv src/NewRLQPController.h src/RobotNameRLQPController.h
-git mv src/states/NewRLQPController_Initial.cpp src/states/RobotNameRLQPController_Initial.cpp
-git mv src/states/NewRLQPController_Initial.h src/states/RobotNameRLQPController_Initial.h
-git mv etc/NewRLQPController.in.yaml etc/RobotNameRLQPController.in.yaml
-```
-
-3. You can customize the project name in vcpkg.json as well, note that this must follow [vcpkg manifest rules](https://github.com/microsoft/vcpkg/blob/master/docs/users/manifests.md)
-
-4. Build and install the project
-
-5. Run using your [mc_rtc] interface of choice, and setting `Enabled` to `RobotNameRLQPController`
-
----
+The documentation also includes practical guides for adapting the controller to new robots and examples.
 
 ## Template layout
 
