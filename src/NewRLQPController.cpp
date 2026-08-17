@@ -5,6 +5,10 @@
 #include <mc_rtc/gui.h>
 #include <mc_rtc/logging.h>
 
+#include <fcntl.h>
+#include <mc_joystick_plugin/joystick_inputs.h>
+#include <termios.h>
+
 #include <cmath>
 
 NewRLQPController::NewRLQPController(mc_rbdyn::RobotModulePtr rm,
@@ -41,6 +45,12 @@ NewRLQPController::NewRLQPController(mc_rbdyn::RobotModulePtr rm,
 
 bool NewRLQPController::run()
 {
+  // Use joystick plugin if present else jeyboard inputs
+  if(datastore().has("Joystick::connected") && datastore().get<bool>("Joystick::connected"))
+    RLuseJoyStickInputs();
+  else
+    RLuseKeyboardInputs();
+
   if(printLimits_) computeLimits();
   bool run = mc_control::fsm::Controller::run(
           mc_solver::FeedbackType::ClosedLoopIntegrateReal);
@@ -55,6 +65,112 @@ void NewRLQPController::reset(const mc_control::ControllerResetData & reset_data
 {
   mc_control::fsm::Controller::reset(reset_data);
   rlRuntime_.reset(*this);
+}
+
+void NewRLQPController::RLuseJoyStickInputs()
+{
+  // Get joystick functions
+  auto & stickFunc = datastore().get<std::function<Eigen::Vector2d(joystickAnalogicInputs)>>("Joystick::Stick");
+
+  // Read sticks values
+  leftStick = stickFunc(joystickAnalogicInputs::L_STICK);
+  // Apply dead zone
+  double vel_x = 0.0;
+  if(std::abs(leftStick(0) - 0.5) > joystickDeadZone)
+  {
+    vel_x = (leftStick(0) - 0.5) * 2.0 * maxVelCmd;
+  }
+  double vel_y = 0.0;
+  if(std::abs(leftStick(1) - 0.5) > joystickDeadZone)
+  {
+    vel_y = (leftStick(1) - 0.5) * 2.0 * maxVelCmd;
+  }
+
+  rightStick = stickFunc(joystickAnalogicInputs::R_STICK);
+  double yaw_cmd = 0.0;
+  if(std::abs(rightStick(1) - 0.5) > joystickDeadZone)
+  {
+    yaw_cmd = (rightStick(1) - 0.5) * 2.0 * maxYawCmd;
+  }
+
+  // Read D-pad buttons
+  DirectionButtons = {datastore().get<bool>("Joystick::UpPad"), datastore().get<bool>("Joystick::DownPad"),
+                      datastore().get<bool>("Joystick::LeftPad"), datastore().get<bool>("Joystick::RightPad")};
+
+  for(size_t i = 0; i < DirectionButtons.size(); ++i)
+  {
+    if(DirectionButtons[i])
+    {
+      switch(i)
+      {
+        case 0: // Up
+          vel_x += 1.0 * maxVelCmd;
+          break;
+        case 1: // Down
+          vel_x -= 1.0 * maxVelCmd;
+          break;
+        case 2: // Left
+          vel_y += 1.0 * maxVelCmd;
+          break;
+        case 3: // Right
+          vel_y -= 1.0 * maxVelCmd;
+          break;
+        default:
+          break;
+      }
+    }
+  }
+  rlRuntime_.setCommand({vel_x, vel_y, yaw_cmd});
+}
+
+void NewRLQPController::RLuseKeyboardInputs()
+{
+  struct Ctx
+  {
+    bool ready = false;
+    termios old{};
+    bool seen[4] = {};
+    std::chrono::steady_clock::time_point ts[4];
+    std::array<char, 64> buf{};
+    size_t sz = 0;
+  };
+  static Ctx k;
+
+  if(!k.ready)
+  {
+    if(::isatty(STDIN_FILENO) != 1) return;
+    k.ready = true;
+    ::tcgetattr(STDIN_FILENO, &k.old);
+    termios raw = k.old;
+    raw.c_lflag &= ~(ICANON | ECHO);
+    raw.c_cc[VMIN] = raw.c_cc[VTIME] = 0;
+    ::tcsetattr(STDIN_FILENO, TCSANOW, &raw);
+    ::fcntl(STDIN_FILENO, F_SETFL, ::fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
+  }
+
+  char tmp[32];
+  ssize_t n = ::read(STDIN_FILENO, tmp, sizeof(tmp));
+  if(n > 0 && k.sz + n < 64) std::copy(tmp, tmp + n, k.buf.begin() + k.sz), k.sz += n;
+
+  auto now = std::chrono::steady_clock::now();
+  for(size_t i = 0; i + 2 < k.sz; ++i)
+    if(k.buf[i] == 27 && k.buf[i + 1] == '[')
+    {
+      int idx = k.buf[i + 2] == 'A'   ? 0
+                : k.buf[i + 2] == 'B' ? 1
+                : k.buf[i + 2] == 'D' ? 2
+                : k.buf[i + 2] == 'C' ? 3
+                                      : -1;
+      if(idx >= 0) k.seen[idx] = true, k.ts[idx] = now;
+      i += 2;
+    }
+  std::copy(k.buf.begin() + (k.sz > 2 ? k.sz - 2 : 0), k.buf.begin() + k.sz, k.buf.begin());
+  k.sz = k.sz > 2 ? 2 : 0;
+
+  const auto active = [&](int i)
+  { return k.seen[i] && std::chrono::duration_cast<std::chrono::milliseconds>(now - k.ts[i]).count() < 500; };
+  rlRuntime_.setCommand({(active(0) ? maxVelCmd : 0.0) - (active(1) ? maxVelCmd : 0.0),
+                         (active(2) ? maxVelCmd : 0.0) - (active(3) ? maxVelCmd : 0.0), rlRuntime_.command()(2)});
 }
 
 void NewRLQPController::activateQPControl(bool activate)
@@ -198,7 +314,7 @@ void NewRLQPController::addGui()
     mc_rtc::gui::Label("Phase", [this]() { return rlRuntime_.phase(); }));
 
   gui()->addElement(
-    {"NewRLQPController", "Command"},
+    {"NewRLQPController", "Command"}, mc_rtc::gui::Label("Command values", []() { return std::string(" "); }),
     mc_rtc::gui::NumberInput(
       "vx",
       [this]() { return rlRuntime_.command()(0); },
@@ -210,7 +326,15 @@ void NewRLQPController::addGui()
     mc_rtc::gui::NumberInput(
       "yaw_rate",
       [this]() { return rlRuntime_.command()(2); },
-      [this](double v) { rlRuntime_.command()(2) = v; }));
+      [this](double v) { rlRuntime_.command()(2) = v; }),
+      mc_rtc::gui::Label("Max values", []() { return std::string(" "); }),
+      mc_rtc::gui::NumberInput(
+          "max_vel_cmd",
+          [this]() { return maxVelCmd; }, [this](double v) { maxVelCmd = v; }),
+      mc_rtc::gui::NumberInput(
+          "max_yaw_cmd",
+          [this]() { return maxYawCmd; }, [this](double v) { maxYawCmd = v; }));
+      
 }
 
 void NewRLQPController::computeLimits()

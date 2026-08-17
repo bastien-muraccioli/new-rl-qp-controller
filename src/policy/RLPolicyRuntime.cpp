@@ -198,6 +198,9 @@ void RLPolicyRuntime::configureControl(const PolicyConfig & policy,
   policyStepSize_ = policy.policyStepSize;
   pdGainsRatio_ = policy.pdGainsRatio;
 
+  ctl.setMaxVelCmd(policy.velCmd.xy);
+  ctl.setMaxYawCmd(policy.velCmd.yaw);
+
   if(policyStepSize_ + 1e-8 < ctl.timeStep)
   {
     mc_rtc::log::warning(

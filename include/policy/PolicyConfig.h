@@ -8,6 +8,14 @@
 
 namespace rlqp
 {
+/**
+ * @brief Stores a policy's velocity commands
+ */
+struct VelocityCommand
+{
+  double xy;
+  double yaw;
+};
 
 /**
  * @brief Owns a policy configuration and informations
@@ -20,6 +28,7 @@ struct PolicyConfig
   std::string onnxPath;
   std::string policyYamlPath;
   std::string observationsYamlPath;
+  VelocityCommand velCmd;
 
   bool useQP = true;
   /** Policy inference period in seconds. Configured through control.period_s or control.frequency_hz. */

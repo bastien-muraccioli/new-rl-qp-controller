@@ -152,6 +152,7 @@ PolicyConfig PolicyConfig::load(const std::string & policyFolder, std::vector<st
 
     const bool hasPeriod = control.has("period_s");
     const bool hasFrequency = control.has("frequency_hz");
+    const bool hasCmdVelSpeed = control.has("vel_cmd_speed");
     if(hasPeriod && hasFrequency)
       mc_rtc::log::error_and_throw("[PolicyConfig:{}] Specify only one of control.period_s or control.frequency_hz",
                                    out.name);
@@ -166,6 +167,12 @@ PolicyConfig PolicyConfig::load(const std::string & policyFolder, std::vector<st
       out.policyStepSize = 1.0 / frequency;
     }
     out.pdGainsRatio = control("pd_gains_ratio", 1.0);
+
+    if(hasCmdVelSpeed)
+    {
+      VelocityCommand vel_cmd{control("vel_cmd_speed")("xy", 0.4), control("vel_cmd_speed")("yaw", 0.4)};
+      out.velCmd = vel_cmd;
+    }
 
     kp_map = control("kp", std::map<std::string, double>());
     kd_map = control("kd", std::map<std::string, double>());

@@ -101,6 +101,10 @@ public:
 
   Eigen::Vector3d & command() { return command_; }
   const Eigen::Vector3d & command() const { return command_; }
+  void setCommand(Eigen::Vector3d new_cmd)
+  {
+    command_ = new_cmd;
+  }
 
 private:
   void loadPolicy(const std::string & policyName,

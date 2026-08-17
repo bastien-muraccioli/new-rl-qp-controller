@@ -80,18 +80,30 @@ struct NewRLQPController_DLLAPI NewRLQPController : public mc_control::fsm::Cont
   bool run() override;
   void reset(const mc_control::ControllerResetData & reset_data) override;
 
+  void RLuseJoyStickInputs();
+  void RLuseKeyboardInputs();
+
   /** @brief Enable or disable the CBF-QP layer at runtime. */
   void activateQPControl(bool activate);
 
   rlqp::RLPolicyRuntime & rlRuntime();
   const rlqp::RLPolicyRuntime & rlRuntime() const;
 
+  void setMaxVelCmd(double new_max_vel_cmd)
+  {
+    maxVelCmd = new_max_vel_cmd;
+  };
+  void setMaxYawCmd(double new_max_yaw_cmd)
+  {
+    maxYawCmd = new_max_yaw_cmd;
+  };
+
   /** @brief Torque-space whole-body task fed into the CBF-QP solver. */
   std::shared_ptr<mc_tasks::TorqueJointTask> torqueJointTask;
 
   /** @brief Total number of actuated joints (from robot().refJointOrder()). */
   int nbActuatedJoints = 0;
-
+ 
   /**
    * @brief Joint names in mc_rtc's reference order (robot().refJointOrder()).
    *
@@ -141,4 +153,13 @@ private:
   double lambda_selfCollision_ = 200.0;
 
   rlqp::RLPolicyRuntime rlRuntime_;
+
+  // --- Velocity Cmd Params ---
+  std::vector<bool> DirectionButtons = std::vector<bool>(4, false); // Up, Down, Left, Right
+  double joystickDeadZone = 0.02; // Dead zone for joystick inputs
+  Eigen::Vector2d leftStick = Eigen::Vector2d(0.5, 0.5); // x (UP), y (LEFT)
+  Eigen::Vector2d rightStick = Eigen::Vector2d(0.5, 0.5); // x (UP), y (LEFT)
+
+  double maxVelCmd;
+  double maxYawCmd;
 };
