@@ -136,6 +136,9 @@ private:
 
 private:
   bool printLimits_ = true;
+  bool toggleJoystick = true;
+  bool toggleKeyboard = false;
+  bool controllerAvailable = false;
 
   std::string robotName_;
 

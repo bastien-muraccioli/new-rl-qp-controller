@@ -46,9 +46,10 @@ NewRLQPController::NewRLQPController(mc_rbdyn::RobotModulePtr rm,
 bool NewRLQPController::run()
 {
   // Use joystick plugin if present else jeyboard inputs
-  if(datastore().has("Joystick::connected") && datastore().get<bool>("Joystick::connected"))
+  controllerAvailable = datastore().has("Joystick::connected") && datastore().get<bool>("Joystick::connected");
+  if(controllerAvailable && toggleJoystick)
     RLuseJoyStickInputs();
-  else
+  else if(toggleKeyboard)
     RLuseKeyboardInputs();
 
   if(printLimits_) computeLimits();
@@ -314,7 +315,37 @@ void NewRLQPController::addGui()
     mc_rtc::gui::Label("Phase", [this]() { return rlRuntime_.phase(); }));
 
   gui()->addElement(
-    {"NewRLQPController", "Command"}, mc_rtc::gui::Label("Command values", []() { return std::string(" "); }),
+    {"NewRLQPController", "Command"},
+    mc_rtc::gui::Button(
+        "Toggle Joystick Plugin",
+        [this]()
+        {
+          toggleJoystick = !toggleJoystick;
+          if(toggleJoystick)
+            toggleKeyboard = false;
+        }),
+    mc_rtc::gui::Label(
+        "Current velcity control mode",
+        [this]()
+        {
+          if(toggleKeyboard)
+            return std::string{"Keyboard"};
+          if(toggleJoystick && controllerAvailable)
+            return std::string{"mc_joystick_plugin"};
+          return std::string{"GUI"};
+        }),
+    mc_rtc::gui::Button(
+        "Toggle Keyboard",
+        [this]()
+        {
+          toggleKeyboard = !toggleKeyboard;
+          if(toggleKeyboard)
+            toggleJoystick = false;
+        }),
+    mc_rtc::gui::Label(
+        "Joystick plugin available",
+        [this]() { return controllerAvailable ? "Yes" : "No"; }),
+    mc_rtc::gui::Label("Command values", []() { return std::string(" "); }),
     mc_rtc::gui::NumberInput(
       "vx",
       [this]() { return rlRuntime_.command()(0); },
@@ -327,14 +358,13 @@ void NewRLQPController::addGui()
       "yaw_rate",
       [this]() { return rlRuntime_.command()(2); },
       [this](double v) { rlRuntime_.command()(2) = v; }),
-      mc_rtc::gui::Label("Max values", []() { return std::string(" "); }),
-      mc_rtc::gui::NumberInput(
-          "max_vel_cmd",
-          [this]() { return maxVelCmd; }, [this](double v) { maxVelCmd = v; }),
-      mc_rtc::gui::NumberInput(
-          "max_yaw_cmd",
-          [this]() { return maxYawCmd; }, [this](double v) { maxYawCmd = v; }));
-      
+    mc_rtc::gui::Label("Max values", []() { return std::string(" "); }),
+    mc_rtc::gui::NumberInput(
+        "max_vel_cmd",
+        [this]() { return maxVelCmd; }, [this](double v) { maxVelCmd = v; }),
+    mc_rtc::gui::NumberInput(
+        "max_yaw_cmd",
+        [this]() { return maxYawCmd; }, [this](double v) { maxYawCmd = v; }));
 }
 
 void NewRLQPController::computeLimits()
