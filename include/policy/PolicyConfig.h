@@ -13,8 +13,8 @@ namespace rlqp
  */
 struct VelocityCommand
 {
-  double xy;
-  double yaw;
+  double xy = 0.4;
+  double yaw = 0.4;
 };
 
 /**

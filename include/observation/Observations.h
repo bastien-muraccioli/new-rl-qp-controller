@@ -67,6 +67,8 @@ public:
 private:
   int bodyIndex_ = -1;
   Eigen::VectorXd scale_;
+  bool useSensor_ = false;
+  std::string sensorName_ = "FloatingBase";
 };
 
 /** @brief Base angular velocity in the configured base body frame. */
@@ -179,6 +181,7 @@ private:
   double offset_ = 0.0;
   Eigen::VectorXd scale_;
   bool cos_first_ = true;
+  double commandDeadzone_ = 0.0;
 };
 
 /**

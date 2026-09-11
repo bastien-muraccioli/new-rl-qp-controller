@@ -169,28 +169,44 @@ void ProjectedGravityObservation::configure(const ObservationContext & context)
   mc_rtc::Configuration parameters =
     context.convention.resolveObservationParameters(requestedType(), type(), config_.parameters);
 
-  const std::string body = readParameter<std::string>(parameters, "body", context.baseBody);
+  const std::string sensor = readParameter<std::string>(parameters, "sensor", "");
+  const std::string body = readParameter<std::string>(parameters, "body", "");
+  if (!sensor.empty() && !body.empty())
+    mc_rtc::log::error_and_throw("[Observation:{}] : chose either sensor OR body for souce");
 
-  if(!context.observationRobot.hasBody(body))
+  if(!sensor.empty())
   {
-    mc_rtc::log::error_and_throw(
-      "[Observation:{}] Body '{}' does not exist on robot '{}'",
-      name(),
-      body,
-      context.observationRobot.name());
+    useSensor_ = true;
+    sensorName_ = sensor;
+    if(!context.observationRobot.hasBodySensor(sensorName_))
+      mc_rtc::log::error_and_throw("[Observation:{}] Body sensor '{}' does not exist on robot '{}'", name(), sensorName_, context.observationRobot.name());
   }
-
-  bodyIndex_ = context.observationRobot.mb().bodyIndexByName(body);
+  else
+  {
+    const std::string obs_body = body.empty() ? context.baseBody : body;
+    if(!context.observationRobot.hasBody(obs_body))
+      mc_rtc::log::error_and_throw("[Observation:{}] Body '{}' does not exist on robot '{}'", name(), obs_body, context.observationRobot.name());
+    bodyIndex_ = context.observationRobot.mb().bodyIndexByName(obs_body);
+  }
   scale_ = readScale(parameters, "scale", 3, 1.0);
 }
 
 void ProjectedGravityObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
 {
-  const sva::PTransformd & X_0_body =
-    context.observationRobot.mbc().bodyPosW[static_cast<size_t>(bodyIndex_)];
-
   const Eigen::Vector3d gravityWorld(0.0, 0.0, -1.0);
-  const Eigen::Vector3d gravityBody = X_0_body.rotation() * gravityWorld;
+  Eigen::Vector3d gravityBody;
+
+  if(useSensor_)
+  {
+    const auto & imu = context.observationRobot.bodySensor(sensorName_);
+    gravityBody = imu.orientation().normalized().toRotationMatrix() * gravityWorld;
+  }
+  else
+  {
+    const sva::PTransformd & X_0_body =
+      context.observationRobot.mbc().bodyPosW[static_cast<size_t>(bodyIndex_)];
+    gravityBody = X_0_body.rotation() * gravityWorld;
+  }
 
   out = gravityBody.cwiseProduct(scale_);
 }
@@ -412,10 +428,16 @@ void PhaseObservation::configure(const ObservationContext & context)
   offset_ = readParameter<double>(parameters, "offset", 0.0);
   scale_ = readScale(parameters, "scale", 2, 1.0);
   cos_first_ = readParameter<bool>(parameters, "cos_first", true);
+  commandDeadzone_ = readParameter<double>(parameters, "command_deadzone", 0.0);
 }
 
 void PhaseObservation::compute(const ObservationContext & context, Eigen::Ref<Eigen::VectorXd> out) const
 {
+  if(commandDeadzone_ > 0.0 && context.command.norm() < commandDeadzone_)
+  {
+    out.setZero();
+    return;
+  }
   const double phase = context.phaseNormalized + offset_;
   const double angle = 2.0 * M_PI * phase;
   
